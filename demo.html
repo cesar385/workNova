@@ -1,0 +1,1046 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WorkNova SaaS Demo</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+        .sidebar-link {
+            transition: all 0.2s ease-in-out;
+        }
+        .sidebar-link:hover, .sidebar-link.active {
+            background-color: #1e40af;
+            color: white;
+            transform: translateX(4px);
+        }
+        .fade-in {
+            animation: fadeIn 0.5s ease-in-out;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        /* Estilos para el scrollbar del Kanban */
+        .kanban-scroll::-webkit-scrollbar {
+            height: 8px;
+        }
+        .kanban-scroll::-webkit-scrollbar-track {
+            background: #f1f5f9;
+            border-radius: 10px;
+        }
+        .kanban-scroll::-webkit-scrollbar-thumb {
+            background: #94a3b8;
+            border-radius: 10px;
+        }
+        .kanban-scroll::-webkit-scrollbar-thumb:hover {
+            background: #64748b;
+        }
+        /* Estilos para Pestañas Activas */
+        .job-tab.active {
+            border-color: #2563eb;
+            color: #2563eb;
+        }
+        /* 9-Box Grid Styles */
+        .nine-box-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            grid-template-rows: repeat(3, 1fr);
+            gap: 4px;
+            aspect-ratio: 1 / 1;
+        }
+        .nine-box-cell {
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 0.5rem;
+            padding: 4px;
+            cursor: pointer;
+        }
+        .employee-dot {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            border: 2px solid white;
+            box-shadow: 0 0 10px rgba(0,0,0,0.3);
+        }
+        #nine-box-tooltip {
+            pointer-events: none;
+        }
+    </style>
+</head>
+<body class="bg-gray-100">
+    <div class="flex h-screen">
+        <!-- Sidebar -->
+        <aside class="w-64 bg-blue-900 text-white flex flex-col">
+            <div class="p-6 flex items-center space-x-3 border-b border-blue-800">
+                 <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-orange-400"><path d="M12 12a5 5 0 1 0 0-10 5 5 0 0 0 0 10z"/><path d="M20.59 22c0-3.87-3.85-7-8.59-7s-8.59 3.13-8.59 7"/><path d="M15.34 19.33a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7z"/><path d="M15.34 12.33V9"/><path d="M18.84 15.83l-2.12-2.12"/></svg>
+                <h1 class="text-2xl font-bold">WorkNova</h1>
+            </div>
+            <nav class="flex-1 p-4 space-y-2">
+                <a href="#dashboard" data-view="dashboard" class="sidebar-link flex items-center p-3 rounded-lg">
+                    <i data-lucide="layout-dashboard" class="w-5 h-5 mr-3"></i> Dashboard
+                </a>
+                <a href="#reclutamiento" data-view="reclutamiento" class="sidebar-link flex items-center p-3 rounded-lg">
+                    <i data-lucide="users" class="w-5 h-5 mr-3"></i> Reclutamiento
+                </a>
+                <a href="#capacitacion" data-view="capacitacion" class="sidebar-link flex items-center p-3 rounded-lg">
+                    <i data-lucide="graduation-cap" class="w-5 h-5 mr-3"></i> Capacitación
+                </a>
+                <a href="#desempeno" data-view="desempeno" class="sidebar-link flex items-center p-3 rounded-lg">
+                    <i data-lucide="bar-chart-3" class="w-5 h-5 mr-3"></i> Desempeño
+                </a>
+                <a href="#analytics" data-view="analytics" class="sidebar-link flex items-center p-3 rounded-lg">
+                    <i data-lucide="pie-chart" class="w-5 h-5 mr-3"></i> People Analytics
+                </a>
+            </nav>
+            <div class="p-4 border-t border-blue-800">
+                <div class="flex items-center">
+                    <img src="https://placehold.co/40x40/orange/white?text=VS" alt="Avatar" class="rounded-full">
+                    <div class="ml-3">
+                        <p class="font-semibold">Verónica Savid</p>
+                        <p class="text-sm text-blue-300">Directora de RR.HH.</p>
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main id="main-content" class="flex-1 p-8 overflow-y-auto">
+            <!-- Vistas se inyectarán aquí -->
+        </main>
+    </div>
+    
+    <!-- 9-Box Tooltip -->
+    <div id="nine-box-tooltip" role="tooltip" class="absolute z-50 invisible inline-block w-64 px-3 py-2 text-sm font-medium text-white transition-opacity duration-300 bg-gray-900 rounded-lg shadow-sm opacity-0">
+        <h3 id="tooltip-title" class="font-semibold text-white mb-1"></h3>
+        <p id="tooltip-content" class="text-xs text-gray-300"></p>
+    </div>
+
+    <!-- Candidate Modal Structure (fuera del main content para posicionamiento global) -->
+    <div id="candidate-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-60 flex justify-center items-center p-4 z-40 transition-opacity duration-300">
+        <div class="bg-white rounded-xl shadow-2xl w-full max-w-3xl max-h-[90vh] flex flex-col transform transition-transform duration-300 scale-95">
+            <div class="p-5 border-b flex justify-between items-center">
+                <div id="modal-header"></div>
+                <button id="close-modal-btn" class="text-gray-400 hover:text-gray-600">
+                    <i data-lucide="x" class="w-6 h-6"></i>
+                </button>
+            </div>
+            <div id="modal-body" class="p-6 overflow-y-auto">
+            </div>
+        </div>
+    </div>
+
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    // Inicialización de la aplicación
+    const app = {
+        mainContent: document.getElementById('main-content'),
+        links: document.querySelectorAll('.sidebar-link'),
+        modal: document.getElementById('candidate-modal'),
+        views: {
+            dashboard: `
+                <div class="fade-in">
+                    <h1 class="text-3xl font-bold text-gray-800 mb-6">Dashboard de RR.HH.</h1>
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                        <div class="bg-white p-6 rounded-xl shadow-md flex items-center justify-between">
+                            <div>
+                                <p class="text-sm text-gray-500">Posiciones Abiertas</p>
+                                <p class="text-3xl font-bold text-blue-600">2</p>
+                            </div>
+                            <div class="bg-blue-100 p-3 rounded-full">
+                                <i data-lucide="briefcase" class="text-blue-600"></i>
+                            </div>
+                        </div>
+                        <div class="bg-white p-6 rounded-xl shadow-md flex items-center justify-between">
+                            <div>
+                                <p class="text-sm text-gray-500">Capacitaciones Activas</p>
+                                <p class="text-3xl font-bold text-green-600">3</p>
+                            </div>
+                            <div class="bg-green-100 p-3 rounded-full">
+                                <i data-lucide="graduation-cap" class="text-green-600"></i>
+                            </div>
+                        </div>
+                         <div class="bg-white p-6 rounded-xl shadow-md flex items-center justify-between">
+                            <div>
+                                <p class="text-sm text-gray-500">Evaluaciones Activas</p>
+                                <p class="text-3xl font-bold text-orange-500">3</p>
+                            </div>
+                            <div class="bg-orange-100 p-3 rounded-full">
+                                <i data-lucide="clipboard-check" class="text-orange-500"></i>
+                            </div>
+                        </div>
+                        <div class="bg-white p-6 rounded-xl shadow-md flex items-center justify-between">
+                            <div>
+                                <p class="text-sm text-gray-500">Nuevas Contrataciones (2025)</p>
+                                <p class="text-3xl font-bold text-indigo-600">12</p>
+                            </div>
+                            <div class="bg-indigo-100 p-3 rounded-full">
+                                <i data-lucide="user-plus" class="text-indigo-600"></i>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mt-8 grid grid-cols-1 lg:grid-cols-2 gap-8">
+                        <div class="bg-white p-6 rounded-xl shadow-md">
+                            <h2 class="text-xl font-semibold mb-4 text-gray-700">Plan de Contrataciones 2025</h2>
+                            <div class="h-80">
+                                <canvas id="hiringChart"></canvas>
+                            </div>
+                        </div>
+                         <div class="bg-white p-6 rounded-xl shadow-md">
+                            <h2 class="text-xl font-semibold mb-4 text-gray-700">Talento en Riesgo (Predicción)</h2>
+                            <div class="space-y-4">
+                                <!-- Card for Juan Mansilla -->
+                                <div class="border border-gray-200 rounded-lg p-4">
+                                    <div class="flex justify-between items-start">
+                                        <div>
+                                            <p class="font-bold text-gray-800">Juan Mansilla</p>
+                                            <p class="text-sm text-gray-500">Técnico de Mantenimiento</p>
+                                        </div>
+                                        <span class="bg-green-200 text-green-800 text-xs font-semibold px-2.5 py-1 rounded-full">Alto Desempeño</span>
+                                    </div>
+                                    <div class="mt-3">
+                                        <p class="text-sm font-semibold text-red-600 flex items-center"><i data-lucide="alert-triangle" class="w-4 h-4 mr-2"></i>Factores de Riesgo:</p>
+                                        <ul class="list-disc list-inside text-sm text-gray-600 mt-1 pl-2">
+                                            <li>Bajo compromiso percibido</li>
+                                            <li>Sobrecarga de trabajo</li>
+                                            <li>Falta de reconocimiento</li>
+                                        </ul>
+                                    </div>
+                                    <div class="mt-4 flex justify-end">
+                                        <button class="text-sm bg-blue-100 text-blue-700 font-semibold py-1 px-3 rounded-md hover:bg-blue-200 view-risk-performance" data-employee-id="juan-mansilla">Ver Evaluación</button>
+                                    </div>
+                                </div>
+                                <!-- Card for Carla Torres -->
+                                <div class="border border-gray-200 rounded-lg p-4">
+                                    <div class="flex justify-between items-start">
+                                        <div>
+                                            <p class="font-bold text-gray-800">Carla Torres</p>
+                                            <p class="text-sm text-gray-500">Vendedora Zonal</p>
+                                        </div>
+                                        <span class="bg-green-400 text-green-900 text-xs font-semibold px-2.5 py-1 rounded-full">Estrella</span>
+                                    </div>
+                                    <div class="mt-3">
+                                        <p class="text-sm font-semibold text-yellow-600 flex items-center"><i data-lucide="flag" class="w-4 h-4 mr-2"></i>Factores de Riesgo:</p>
+                                        <ul class="list-disc list-inside text-sm text-gray-600 mt-1 pl-2">
+                                            <li>Desmotivación por falta de comunicación</li>
+                                            <li>Sin plan de carrera claro</li>
+                                        </ul>
+                                    </div>
+                                    <div class="mt-4 flex justify-end">
+                                        <button class="text-sm bg-blue-100 text-blue-700 font-semibold py-1 px-3 rounded-md hover:bg-blue-200 view-risk-performance" data-employee-id="carla-torres">Ver Evaluación</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `,
+            reclutamiento: `
+                <div class="fade-in">
+                    <div class="flex justify-between items-center mb-6">
+                        <h1 class="text-3xl font-bold text-gray-800">Módulo de Reclutamiento</h1>
+                        <button class="bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg flex items-center hover:bg-blue-700 transition shadow hover:shadow-md">
+                            <i data-lucide="plus" class="w-5 h-5 mr-2"></i> Crear Nueva Posición
+                        </button>
+                    </div>
+
+                    <div class="mb-4 border-b border-gray-200">
+                        <ul class="flex flex-wrap -mb-px text-sm font-medium text-center" id="jobTabs">
+                            <li class="mr-2">
+                                <a href="#" class="job-tab inline-block p-4 border-b-2 rounded-t-lg" data-tab="coordinador">Coordinador/a de Atn. al Cliente</a>
+                            </li>
+                            <li class="mr-2">
+                                <a href="#" class="job-tab inline-block p-4 border-b-2 rounded-t-lg" data-tab="tecnico">Técnico de Software</a>
+                            </li>
+                        </ul>
+                    </div>
+
+                    <div id="job-content">
+                        <!-- Contenido de Coordinador -->
+                        <div id="coordinadorContent" class="job-tab-content">
+                            <div class="bg-white rounded-xl shadow-md">
+                                <div class="p-6 bg-gray-50 kanban-scroll overflow-x-auto">
+                                    <div class="flex space-x-4">
+                                        <div class="w-80 bg-slate-200 rounded-xl p-3 flex-shrink-0">
+                                            <h3 class="font-bold text-slate-700 mb-4 px-2">Preselección (5)</h3>
+                                            <div class="space-y-3">
+                                                <div data-candidate="paula" class="bg-white p-4 rounded-lg shadow cursor-pointer hover:shadow-lg"><p class="font-semibold">Paula Cabrera</p></div>
+                                                <div data-candidate="gonzalo" class="bg-white p-4 rounded-lg shadow cursor-pointer hover:shadow-lg"><p class="font-semibold">Gonzalo Herrera</p></div>
+                                                <div data-candidate="maria" class="bg-white p-4 rounded-lg shadow cursor-pointer hover:shadow-lg"><p class="font-semibold">María Belén Rojas</p></div>
+                                                <div data-candidate="sofia" class="bg-white p-4 rounded-lg shadow cursor-pointer hover:shadow-lg"><p class="font-semibold">Sofía Morales</p></div>
+                                                <div data-candidate="rodrigo" class="bg-white p-4 rounded-lg shadow cursor-pointer hover:shadow-lg"><p class="font-semibold">Rodrigo Vega</p></div>
+                                            </div>
+                                        </div>
+                                        <div class="w-80 bg-slate-200 rounded-xl p-3 flex-shrink-0">
+                                            <h3 class="font-bold text-slate-700 mb-4 px-2">Entrevistas (5)</h3>
+                                            <div class="space-y-3">
+                                                <div data-candidate="paula" class="bg-white p-4 rounded-lg shadow cursor-pointer hover:shadow-lg hover:border-blue-500 border-2 border-transparent transition flex items-center space-x-3"><img src="https://placehold.co/40x40/60a5fa/white?text=PC" class="rounded-full" alt="PC"><div><p class="font-bold">Paula Cabrera</p></div></div>
+                                                <div data-candidate="gonzalo" class="bg-white p-4 rounded-lg shadow cursor-pointer hover:shadow-lg hover:border-blue-500 border-2 border-transparent transition flex items-center space-x-3"><img src="https://placehold.co/40x40/94a3b8/white?text=GH" class="rounded-full" alt="GH"><div><p class="font-bold">Gonzalo Herrera</p></div></div>
+                                                <div data-candidate="maria" class="bg-white p-4 rounded-lg shadow cursor-pointer hover:shadow-lg hover:border-blue-500 border-2 border-transparent transition flex items-center space-x-3"><img src="https://placehold.co/40x40/f472b6/white?text=MR" class="rounded-full" alt="MR"><div><p class="font-bold">María Belén Rojas</p></div></div>
+                                                <div data-candidate="sofia" class="bg-white p-4 rounded-lg shadow cursor-pointer hover:shadow-lg hover:border-blue-500 border-2 border-transparent transition flex items-center space-x-3"><img src="https://placehold.co/40x40/a78bfa/white?text=SM" class="rounded-full" alt="SM"><div><p class="font-bold">Sofía Morales</p></div></div>
+                                                <div data-candidate="rodrigo" class="bg-white p-4 rounded-lg shadow cursor-pointer hover:shadow-lg hover:border-blue-500 border-2 border-transparent transition flex items-center space-x-3"><img src="https://placehold.co/40x40/f59e0b/white?text=RV" class="rounded-full" alt="RV"><div><p class="font-bold">Rodrigo Vega</p></div></div>
+                                            </div>
+                                        </div>
+                                        <div class="w-80 bg-slate-200 rounded-xl p-3 flex-shrink-0">
+                                            <h3 class="font-bold text-slate-700 mb-4 px-2">Oferta (1)</h3>
+                                            <div class="space-y-3">
+                                                <div data-candidate="paula" class="bg-white p-4 rounded-lg shadow cursor-pointer hover:shadow-lg hover:border-blue-500 border-2 border-transparent transition flex items-center space-x-3"><img src="https://placehold.co/40x40/60a5fa/white?text=PC" class="rounded-full" alt="PC"><div><p class="font-bold">Paula Cabrera</p></div></div>
+                                            </div>
+                                        </div>
+                                        <div class="w-80 bg-green-100 rounded-xl p-3 flex-shrink-0">
+                                            <h3 class="font-bold text-green-800 mb-4 px-2">Contratado (1)</h3>
+                                            <div class="space-y-3">
+                                                <div data-candidate="paula" class="bg-white p-4 rounded-lg shadow-lg cursor-pointer border-2 border-green-500 transition flex items-center space-x-3"><img src="https://placehold.co/40x40/60a5fa/white?text=PC" class="rounded-full" alt="PC"><div><p class="font-bold">Paula Cabrera</p></div></div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <!-- Contenido de Técnico -->
+                        <div id="tecnicoContent" class="job-tab-content hidden">
+                           <div class="bg-white rounded-xl shadow-md">
+                                <div class="p-6 bg-gray-50 kanban-scroll overflow-x-auto">
+                                    <div class="flex space-x-4">
+                                        <div class="w-80 bg-slate-200 rounded-xl p-3 flex-shrink-0">
+                                            <h3 class="font-bold text-slate-700 mb-4 px-2">Preselección (3)</h3>
+                                            <div class="space-y-3">
+                                                <div data-candidate="mb" class="bg-white p-4 rounded-lg shadow cursor-pointer hover:shadow-lg"><p class="font-semibold">Martín Benitez</p></div>
+                                                <div data-candidate="lg" class="bg-white p-4 rounded-lg shadow cursor-pointer hover:shadow-lg"><p class="font-semibold">Laura Gimenez</p></div>
+                                                <div data-candidate="cv" class="bg-white p-4 rounded-lg shadow cursor-pointer hover:shadow-lg"><p class="font-semibold">Carlos Vega</p></div>
+                                            </div>
+                                        </div>
+                                        <div class="w-80 bg-slate-200 rounded-xl p-3 flex-shrink-0">
+                                            <h3 class="font-bold text-slate-700 mb-4 px-2">Entrevistas (2)</h3>
+                                            <div class="space-y-3">
+                                                <div data-candidate="mb" class="bg-white p-4 rounded-lg shadow cursor-pointer hover:shadow-lg hover:border-blue-500 border-2 border-transparent transition flex items-center space-x-3"><img src="https://placehold.co/40x40/22d3ee/white?text=MB" class="rounded-full" alt="MB"><div><p class="font-bold">Martín Benitez</p></div></div>
+                                                <div data-candidate="cv" class="bg-white p-4 rounded-lg shadow cursor-pointer hover:shadow-lg hover:border-blue-500 border-2 border-transparent transition flex items-center space-x-3"><img src="https://placehold.co/40x40/34d399/white?text=CV" class="rounded-full" alt="CV"><div><p class="font-bold">Carlos Vega</p></div></div>
+                                            </div>
+                                        </div>
+                                        <div class="w-80 bg-slate-200 rounded-xl p-3 flex-shrink-0">
+                                            <h3 class="font-bold text-slate-700 mb-4 px-2">Oferta (1)</h3>
+                                            <div class="space-y-3">
+                                               <div data-candidate="cv" class="bg-white p-4 rounded-lg shadow cursor-pointer hover:shadow-lg hover:border-blue-500 border-2 border-transparent transition flex items-center space-x-3"><img src="https://placehold.co/40x40/34d399/white?text=CV" class="rounded-full" alt="CV"><div><p class="font-bold">Carlos Vega</p></div></div>
+                                            </div>
+                                        </div>
+                                         <div class="w-80 bg-slate-200 rounded-xl p-3 flex-shrink-0">
+                                            <h3 class="font-bold text-slate-700 mb-4 px-2">Contratado (0)</h3>
+                                            <div class="space-y-3">
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `,
+            capacitacion: `
+                <div class="fade-in">
+                    <h1 class="text-3xl font-bold text-gray-800 mb-6">Módulo de Capacitación</h1>
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                        <!-- Columna de Planes de Desarrollo -->
+                        <div class="bg-white rounded-xl shadow-md p-6">
+                            <h2 class="text-xl font-semibold text-gray-700 mb-4">Planes de Desarrollo Sugeridos</h2>
+                             <p class="text-sm text-gray-500 mb-6">Capacitaciones recomendadas basadas en las últimas evaluaciones de desempeño.</p>
+                            <div class="space-y-6">
+
+                                <!-- Card for Juan Mansilla -->
+                                <div class="border rounded-lg p-4">
+                                    <div class="flex items-center space-x-3 mb-4">
+                                        <img src="https://placehold.co/48x48/blue/white?text=JM" class="rounded-full" alt="Juan Mansilla">
+                                        <div>
+                                            <h3 class="font-bold text-lg">Juan Mansilla</h3>
+                                            <p class="text-sm text-gray-500">Técnico de Mantenimiento</p>
+                                        </div>
+                                    </div>
+                                    <div class="space-y-3">
+                                        <div class="bg-blue-50 p-3 rounded-md">
+                                            <h4 class="font-semibold text-blue-800">Liderazgo Operativo para Equipos Técnicos</h4>
+                                            <div class="w-full bg-gray-200 rounded-full h-2.5 mt-2">
+                                                <div class="bg-blue-600 h-2.5 rounded-full" style="width: 75%"></div>
+                                            </div>
+                                            <p class="text-right text-xs text-gray-500 mt-1">75% completado</p>
+                                        </div>
+                                        <div class="bg-green-50 p-3 rounded-md">
+                                            <h4 class="font-semibold text-green-800">Comunicación Efectiva</h4>
+                                            <div class="w-full bg-gray-200 rounded-full h-2.5 mt-2">
+                                                <div class="bg-green-600 h-2.5 rounded-full" style="width: 25%"></div>
+                                            </div>
+                                            <p class="text-right text-xs text-gray-500 mt-1">25% completado</p>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <!-- Card for Carla Torres -->
+                                <div class="border rounded-lg p-4">
+                                     <div class="flex items-center space-x-3 mb-4">
+                                        <img src="https://placehold.co/48x48/pink/white?text=CT" class="rounded-full" alt="Carla Torres">
+                                        <div>
+                                            <h3 class="font-bold text-lg">Carla Torres</h3>
+                                            <p class="text-sm text-gray-500">Vendedora Zonal</p>
+                                        </div>
+                                    </div>
+                                     <div class="space-y-3">
+                                        <div class="bg-purple-50 p-3 rounded-md">
+                                            <h4 class="font-semibold text-purple-800">Desarrollo de Carrera Profesional</h4>
+                                             <div class="w-full bg-gray-200 rounded-full h-2.5 mt-2">
+                                                <div class="bg-purple-600 h-2.5 rounded-full" style="width: 50%"></div>
+                                            </div>
+                                            <p class="text-right text-xs text-gray-500 mt-1">50% completado</p>
+                                        </div>
+                                        <div class="bg-yellow-50 p-3 rounded-md">
+                                            <h4 class="font-semibold text-yellow-800">Técnicas de Venta Consultiva</h4>
+                                            <div class="w-full bg-gray-200 rounded-full h-2.5 mt-2">
+                                                <div class="bg-yellow-500 h-2.5 rounded-full" style="width: 80%"></div>
+                                            </div>
+                                            <p class="text-right text-xs text-gray-500 mt-1">80% completado</p>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Card for Gabriel López -->
+                                <div class="border rounded-lg p-4">
+                                     <div class="flex items-center space-x-3 mb-4">
+                                        <img src="https://placehold.co/48x48/indigo/white?text=GL" class="rounded-full" alt="Gabriel Lopez">
+                                        <div>
+                                            <h3 class="font-bold text-lg">Gabriel López</h3>
+                                            <p class="text-sm text-gray-500">Coordinador de Planta</p>
+                                        </div>
+                                    </div>
+                                     <div class="space-y-3">
+                                        <div class="bg-red-50 p-3 rounded-md">
+                                            <h4 class="font-semibold text-red-800">Liderazgo y Feedback para Mandos Medios</h4>
+                                             <div class="w-full bg-gray-200 rounded-full h-2.5 mt-2">
+                                                <div class="bg-red-600 h-2.5 rounded-full" style="width: 10%"></div>
+                                            </div>
+                                            <p class="text-right text-xs text-gray-500 mt-1">10% completado</p>
+                                        </div>
+                                    </div>
+                                </div>
+
+                            </div>
+                        </div>
+                        <!-- Columna de Catálogo de Cursos -->
+                        <div class="bg-white rounded-xl shadow-md p-6">
+                            <h2 class="text-xl font-semibold text-gray-700 mb-4">Catálogo General de Cursos</h2>
+                            <div class="space-y-4">
+                                <div class="border p-4 rounded-lg flex items-center justify-between hover:bg-gray-50">
+                                    <div>
+                                        <h3 class="font-semibold">Liderazgo Operativo para Equipos Técnicos</h3>
+                                        <p class="text-sm text-gray-500">4 semanas • Híbrido</p>
+                                    </div>
+                                    <button class="bg-blue-100 text-blue-700 px-3 py-1 rounded-md text-sm font-semibold hover:bg-blue-200">Inscribir</button>
+                                </div>
+                                <div class="border p-4 rounded-lg flex items-center justify-between hover:bg-gray-50">
+                                    <div>
+                                        <h3 class="font-semibold">Comunicación Efectiva</h3>
+                                        <p class="text-sm text-gray-500">4 semanas • Virtual</p>
+                                    </div>
+                                    <button class="bg-blue-100 text-blue-700 px-3 py-1 rounded-md text-sm font-semibold hover:bg-blue-200">Inscribir</button>
+                                </div>
+                                <div class="border p-4 rounded-lg flex items-center justify-between hover:bg-gray-50">
+                                    <div>
+                                        <h3 class="font-semibold">Desarrollo de Carrera Profesional</h3>
+                                        <p class="text-sm text-gray-500">6 semanas • Virtual</p>
+                                    </div>
+                                    <button class="bg-blue-100 text-blue-700 px-3 py-1 rounded-md text-sm font-semibold hover:bg-blue-200">Inscribir</button>
+                                </div>
+                                <div class="border p-4 rounded-lg flex items-center justify-between hover:bg-gray-50">
+                                    <div>
+                                        <h3 class="font-semibold">Técnicas de Venta Consultiva</h3>
+                                        <p class="text-sm text-gray-500">4 semanas • Virtual</p>
+                                    </div>
+                                    <button class="bg-blue-100 text-blue-700 px-3 py-1 rounded-md text-sm font-semibold hover:bg-blue-200">Inscribir</button>
+                                </div>
+                                 <div class="border p-4 rounded-lg flex items-center justify-between hover:bg-gray-50">
+                                    <div>
+                                        <h3 class="font-semibold">Liderazgo y Feedback para Mandos Medios</h3>
+                                        <p class="text-sm text-gray-500">8 semanas • Híbrido</p>
+                                    </div>
+                                    <button class="bg-blue-100 text-blue-700 px-3 py-1 rounded-md text-sm font-semibold hover:bg-blue-200">Inscribir</button>
+                                </div>
+                                <div class="border p-4 rounded-lg flex items-center justify-between hover:bg-gray-50">
+                                    <div>
+                                        <h3 class="font-semibold">Actualización en Nuevas Tecnologías Agro</h3>
+                                        <p class="text-sm text-gray-500">4 semanas • Híbrido</p>
+                                    </div>
+                                    <button class="bg-blue-100 text-blue-700 px-3 py-1 rounded-md text-sm font-semibold hover:bg-blue-200">Inscribir</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>`,
+            desempeno: `
+                <div class="fade-in" id="performance-module">
+                    <!-- This will be populated by JS -->
+                </div>
+            `,
+            analytics: `
+                <div class="fade-in">
+                    <h1 class="text-3xl font-bold text-gray-800 mb-6">Módulo de People Analytics</h1>
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                        <div class="bg-white p-6 rounded-xl shadow-md">
+                            <h2 class="text-xl font-semibold mb-1 text-gray-700">Tasa de Rotación Anual</h2>
+                            <p class="text-sm text-gray-500 mb-4">Análisis por área funcional</p>
+                            <div class="h-80">
+                                <canvas id="turnoverChart"></canvas>
+                            </div>
+                        </div>
+                        <div class="bg-white p-6 rounded-xl shadow-md">
+                             <h2 class="text-xl font-semibold mb-1 text-gray-700">Nivel de Satisfacción</h2>
+                             <p class="text-sm text-gray-500 mb-4">Encuesta de clima laboral Q3 2025</p>
+                             <div class="h-80 flex justify-center items-center">
+                                <canvas id="satisfactionChart"></canvas>
+                             </div>
+                        </div>
+                        <div class="bg-white p-6 rounded-xl shadow-md lg:col-span-2">
+                            <h2 class="text-xl font-semibold mb-1 text-gray-700">Análisis de Cohortes</h2>
+                            <p class="text-sm text-gray-500 mb-4">Desempeño post-capacitación (Cohorte Liderazgo Q2)</p>
+                             <div class="h-80">
+                                <canvas id="cohortChart"></canvas>
+                             </div>
+                        </div>
+                    </div>
+                </div>
+            `,
+        },
+        candidateData: {
+            paula: {
+                header: `<div class="flex items-center space-x-4"><img src="https://placehold.co/48x48/60a5fa/white?text=PC" class="rounded-full" alt="PC"><div><h2 class="text-2xl font-bold text-gray-800">Paula Cabrera</h2><p class="text-gray-500">Lic. en RRHH • 35 años</p></div></div>`,
+                body: `<div class="space-y-6"><div><h3 class="font-bold text-lg text-gray-700 mb-2">Resumen de Entrevista</h3><div class="text-gray-600 space-y-3 text-sm"><p><span class="font-semibold text-gray-800">Clave:</span> Se mostró segura, con comunicación clara y orientada a resultados. Reflejó amplia experiencia en liderazgo de equipos de call center y dominio de indicadores de gestión.</p><p><span class="font-semibold text-gray-800">Habilidades Técnicas:</span> Manejo de Salesforce y Zendesk.</p></div></div><div class="bg-yellow-50 border-l-4 border-yellow-500 text-yellow-800 p-4 rounded-r-lg"><h3 class="font-bold text-lg mb-2">Análisis Final</h3><p class="text-sm">Se posiciona como la mejor candidata por su experiencia directa, su equilibrio entre enfoque humano y resultados, y su alineación con la cultura de WorkNova.</p></div><div><h3 class="font-bold text-lg text-gray-700 mb-2">Estado Actual</h3><p class="text-green-600 font-semibold flex items-center"><i data-lucide="check-circle-2" class="w-5 h-5 mr-2"></i>Contratada</p></div></div>`
+            },
+            gonzalo: {
+                header: `<div class="flex items-center space-x-4"><img src="https://placehold.co/48x48/94a3b8/white?text=GH" class="rounded-full" alt="GH"><div><h2 class="text-2xl font-bold text-gray-800">Gonzalo Herrera</h2><p class="text-gray-500">Lic. en Administración • 33 años</p></div></div>`,
+                body: `<div class="space-y-6"><div><h3 class="font-bold text-lg text-gray-700 mb-2">Resumen de Entrevista</h3><div class="text-gray-600 space-y-3 text-sm"><p><span class="font-semibold text-gray-800">Clave:</span> Mantuvo una actitud serena y profesional. Mostró solidez en gestión de equipos y enfoque en la planificación. Destacó por su capacidad de análisis y resolución de conflictos.</p><p><span class="font-semibold text-gray-800">Habilidades Técnicas:</span> CRM bancario, Excel avanzado y Power BI.</p></div></div><div class="bg-blue-50 border-l-4 border-blue-500 text-blue-800 p-4 rounded-r-lg"><h3 class="font-bold text-lg mb-2">Análisis Final</h3><p class="text-sm">Perfil estructurado y con fuerte orientación a resultados, aunque su experiencia está más vinculada a entornos bancarios tradicionales que digitales.</p></div><div><h3 class="font-bold text-lg text-gray-700 mb-2">Estado Actual</h3><p class="text-gray-600 font-semibold flex items-center"><i data-lucide="database" class="w-5 h-5 mr-2"></i>En base de datos</p></div></div>`
+            },
+            maria: {
+                header: `<div class="flex items-center space-x-4"><img src="https://placehold.co/48x48/f472b6/white?text=MR" class="rounded-full" alt="MR"><div><h2 class="text-2xl font-bold text-gray-800">María Belén Rojas</h2><p class="text-gray-500">Lic. en Comunicación Social • 32 años</p></div></div>`,
+                body: `<div class="space-y-6"><div><h3 class="font-bold text-lg text-gray-700 mb-2">Resumen de Entrevista</h3><div class="text-gray-600 space-y-3 text-sm"><p><span class="font-semibold text-gray-800">Clave:</span> Transmitió entusiasmo y cercanía. Destacó por su habilidad comunicativa y orientación al cliente. Clara vocación por el trabajo en equipo y el aprendizaje continuo.</p><p><span class="font-semibold text-gray-800">Habilidades Técnicas:</span> Zendesk y Freshdesk, herramientas de seguimiento en redes sociales.</p></div></div><div class="bg-blue-50 border-l-4 border-blue-500 text-blue-800 p-4 rounded-r-lg"><h3 class="font-bold text-lg mb-2">Análisis Final</h3><p class="text-sm">Excelente comunicadora con marcada vocación de servicio. Aunque su experiencia en liderazgo formal es limitada, posee buena proyección a futuro.</p></div><div><h3 class="font-bold text-lg text-gray-700 mb-2">Estado Actual</h3><p class="text-gray-600 font-semibold flex items-center"><i data-lucide="database" class="w-5 h-5 mr-2"></i>En base de datos</p></div></div>`
+            },
+            sofia: {
+                header: `<div class="flex items-center space-x-4"><img src="https://placehold.co/48x48/a78bfa/white?text=SM" class="rounded-full" alt="SM"><div><h2 class="text-2xl font-bold text-gray-800">Sofía Morales</h2><p class="text-gray-500">Tec. en Gestión Comercial • 30 años</p></div></div>`,
+                body: `<div class="space-y-6"><div><h3 class="font-bold text-lg text-gray-700 mb-2">Resumen de Entrevista</h3><div class="text-gray-600 space-y-3 text-sm"><p><span class="font-semibold text-gray-800">Clave:</span> Se mostró simpática y con buena predisposición. Su experiencia en atención multicanal es valiosa, y domina herramientas CRM. Manifestó interés en desarrollarse en liderazgo.</p><p><span class="font-semibold text-gray-800">Habilidades Técnicas:</span> CRM Zoho, plataformas de redes y WhatsApp Business.</p></div></div><div class="bg-blue-50 border-l-4 border-blue-500 text-blue-800 p-4 rounded-r-lg"><h3 class="font-bold text-lg mb-2">Análisis Final</h3><p class="text-sm">Perfil junior con buen potencial de crecimiento, pero sin experiencia formal en liderazgo de equipos.</p></div><div><h3 class="font-bold text-lg text-gray-700 mb-2">Estado Actual</h3><p class="text-gray-600 font-semibold flex items-center"><i data-lucide="database" class="w-5 h-5 mr-2"></i>En base de datos</p></div></div>`
+            },
+            rodrigo: {
+                header: `<div class="flex items-center space-x-4"><img src="https://placehold.co/48x48/f59e0b/white?text=RV" class="rounded-full" alt="RV"><div><h2 class="text-2xl font-bold text-gray-800">Rodrigo Vega</h2><p class="text-gray-500">Lic. en Relaciones Públicas • 36 años</p></div></div>`,
+                body: `<div class="space-y-6"><div><h3 class="font-bold text-lg text-gray-700 mb-2">Resumen de Entrevista</h3><div class="text-gray-600 space-y-3 text-sm"><p><span class="font-semibold text-gray-800">Clave:</span> Proyectó mucha confianza y experiencia. Mostró una visión estratégica del servicio al cliente y una sólida trayectoria en liderazgo. Su perfil es maduro y enfocado a la calidad.</p><p><span class="font-semibold text-gray-800">Habilidades Técnicas:</span> CRM Salesforce, plataformas de reclamos y métricas de satisfacción (NPS).</p></div></div><div class="bg-blue-50 border-l-4 border-blue-500 text-blue-800 p-4 rounded-r-lg"><h3 class="font-bold text-lg mb-2">Análisis Final</h3><p class="text-sm">Liderazgo consolidado y visión estratégica, aunque podría requerir adaptación a un entorno más dinámico y flexible como el de WorkNova.</p></div><div><h3 class="font-bold text-lg text-gray-700 mb-2">Estado Actual</h3><p class="text-gray-600 font-semibold flex items-center"><i data-lucide="database" class="w-5 h-5 mr-2"></i>En base de datos</p></div></div>`
+            },
+            mb: {
+                header: `<div class="flex items-center space-x-4"><img src="https://placehold.co/48x48/22d3ee/white?text=MB" class="rounded-full" alt="MB"><div><h2 class="text-2xl font-bold text-gray-800">Martín Benitez</h2><p class="text-gray-500">Ing. en Sistemas • 28 años</p></div></div>`,
+                body: `<div class="space-y-6"><div><h3 class="font-bold text-lg text-gray-700 mb-2">Resumen de Entrevista</h3><div class="text-gray-600 space-y-3 text-sm"><p><span class="font-semibold text-gray-800">Clave:</span> Sólidos conocimientos técnicos en Java y SQL. Muestra capacidad para resolver problemas complejos de manera eficiente.</p><p><span class="font-semibold text-gray-800">Habilidades Técnicas:</span> Java, SQL, Spring Boot, Docker.</p></div></div><div class="bg-blue-50 border-l-4 border-blue-500 text-blue-800 p-4 rounded-r-lg"><h3 class="font-bold text-lg mb-2">Análisis Final</h3><p class="text-sm">Buen perfil técnico, pero necesita mejorar sus habilidades de comunicación para el trabajo en equipo. Fuerte potencial individual.</p></div><div><h3 class="font-bold text-lg text-gray-700 mb-2">Estado Actual</h3><p class="text-blue-600 font-semibold flex items-center"><i data-lucide="user-check" class="w-5 h-5 mr-2"></i>En Entrevista</p></div></div>`
+            },
+            lg: {
+                header: `<div class="flex items-center space-x-4"><img src="https://placehold.co/48x48/ec4899/white?text=LG" class="rounded-full" alt="LG"><div><h2 class="text-2xl font-bold text-gray-800">Laura Gimenez</h2><p class="text-gray-500">Tec. en Programación • 24 años</p></div></div>`,
+                body: `<div class="space-y-6"><div><h3 class="font-bold text-lg text-gray-700 mb-2">Resumen de Entrevista</h3><div class="text-gray-600 space-y-3 text-sm"><p><span class="font-semibold text-gray-800">Clave:</span> Perfil muy proactivo y con gran capacidad de aprendizaje. Entusiasmada por los desafíos técnicos del puesto.</p><p><span class="font-semibold text-gray-800">Habilidades Técnicas:</span> JavaScript, React, Node.js.</p></div></div><div class="bg-red-50 border-l-4 border-red-500 text-red-800 p-4 rounded-r-lg"><h3 class="font-bold text-lg mb-2">Análisis Final</h3><p class="text-sm">Perfil junior con alto potencial. Le falta experiencia en proyectos de gran escala, pero su actitud es excelente. Se descarta por falta de seniority para este rol específico.</p></div><div><h3 class="font-bold text-lg text-gray-700 mb-2">Estado Actual</h3><p class="text-gray-600 font-semibold flex items-center"><i data-lucide="database" class="w-5 h-5 mr-2"></i>Descartado</p></div></div>`
+            },
+            cv: {
+                header: `<div class="flex items-center space-x-4"><img src="https://placehold.co/48x48/34d399/white?text=CV" class="rounded-full" alt="CV"><div><h2 class="text-2xl font-bold text-gray-800">Carlos Vega</h2><p class="text-gray-500">Analista de Sistemas • 31 años</p></div></div>`,
+                body: `<div class="space-y-6"><div><h3 class="font-bold text-lg text-gray-700 mb-2">Resumen de Entrevista</h3><div class="text-gray-600 space-y-3 text-sm"><p><span class="font-semibold text-gray-800">Clave:</span> Experiencia sólida en metodologías ágiles (Scrum) y gestión de proyectos de software. Buena comunicación y visión de producto.</p><p><span class="font-semibold text-gray-800">Habilidades Técnicas:</span> Python, Django, AWS, Jira.</p></div></div><div class="bg-green-50 border-l-4 border-green-500 text-green-800 p-4 rounded-r-lg"><h3 class="font-bold text-lg mb-2">Análisis Final</h3><p class="text-sm">Perfil senior muy completo que combina habilidades técnicas y de gestión. Potencial para asumir un rol de liderazgo técnico en el futuro.</p></div><div><h3 class="font-bold text-lg text-gray-700 mb-2">Estado Actual</h3><p class="text-purple-600 font-semibold flex items-center"><i data-lucide="file-text" class="w-5 h-5 mr-2"></i>Oferta Enviada</p></div></div>`
+            }
+        },
+        // --- NEW DATA FOR PERFORMANCE MODULE ---
+        performanceData: {
+            'juan-mansilla': {
+                name: 'Juan Mansilla',
+                avatar: 'https://placehold.co/48x48/blue/white?text=JM',
+                position: 'Técnico de Mantenimiento',
+                seniority: '5 años',
+                date: '25/09/2025',
+                status: 'Completada',
+                statusColor: 'green',
+                competencies: [
+                    { name: 'Conocimientos Técnicos', score: 5, obs: 'Presenta amplio conocimiento y experiencia.' },
+                    { name: 'Calidad del trabajo', score: 4, obs: 'Cumple con altos estándares.' },
+                    { name: 'Responsabilidad y compromiso', score: 4, obs: 'Muy responsable y confiable.' },
+                    { name: 'Trabajo en equipo', score: 3, obs: 'Colabora, pero le cuesta la paciencia.' },
+                    { name: 'Comunicación', score: 3, obs: 'Debe mejorar su capacidad de feedback.' },
+                    { name: 'Iniciativa', score: 4, obs: 'Aporta ideas útiles y soluciones.' },
+                    { name: 'Adaptabilidad al cambio', score: 4, obs: 'Buena adaptación general.' },
+                    { name: 'Liderazgo Operativo', score: 3, obs: 'Asume rol informal, necesita capacitación.' }
+                ],
+                summary: {
+                    strengths: 'Dominio técnico, compromiso, resolución de problemas.',
+                    improvements: 'Comunicación con el equipo, liderazgo operativo.'
+                },
+                recommendation: 'El desempeño de Juan es sólido en lo técnico. Se recomienda incluirlo en el Plan de Capacitación 2025, en los módulos de Liderazgo Operativo y Comunicación Efectiva para fortalecer sus habilidades blandas.',
+                nineBox: { performance: 3, potential: 2 } // High Perf, Medium Pot
+            },
+            'carla-torres': {
+                name: 'Carla Torres',
+                avatar: 'https://placehold.co/48x48/pink/white?text=CT',
+                position: 'Vendedora Zonal',
+                seniority: '2 años',
+                date: '28/09/2025',
+                status: 'Completada',
+                statusColor: 'green',
+                competencies: [
+                     { name: 'Conocimiento del Producto', score: 5, obs: 'Dominio completo del portfolio.' },
+                     { name: 'Orientación a Resultados', score: 5, obs: 'Supera los objetivos de venta consistentemente.' },
+                     { name: 'Comunicación', score: 4, obs: 'Excelente trato con clientes.' },
+                     { name: 'Planificación', score: 3, obs: 'Puede mejorar la organización de sus rutas.' },
+                     { name: 'Trabajo en equipo', score: 3, obs: 'Colabora, pero su rol remoto la aísla.' },
+                ],
+                summary: {
+                    strengths: 'Cumple objetivos, proactiva, busca crecer.',
+                    improvements: 'Se muestra desmotivada por la falta de comunicación con la sede central.'
+                },
+                recommendation: 'Carla es un talento clave. Se recomienda un plan de carrera claro y mayor integración con el equipo central para mantener su motivación.',
+                nineBox: { performance: 3, potential: 3 } // High Perf, High Pot
+            },
+            'gabriel-lopez': {
+                name: 'Gabriel López',
+                avatar: 'https://placehold.co/48x48/indigo/white?text=GL',
+                position: 'Coordinador de Planta',
+                seniority: '8 años',
+                date: '15/10/2025',
+                status: 'Pendiente',
+                statusColor: 'yellow',
+                competencies: [
+                    { name: 'Conocimiento del Producto', score: 5, obs: 'Referente técnico indiscutido.' },
+                    { name: 'Gestión de Equipo', score: 2, obs: 'Le cuesta delegar tareas críticas.' },
+                    { name: 'Liderazgo', score: 2, obs: 'Necesita desarrollar habilidades de feedback.' },
+                    { name: 'Planificación', score: 4, obs: 'Organiza bien los recursos de la planta.' },
+                ],
+                summary: {
+                    strengths: 'Gran conocimiento técnico y de producto.',
+                    improvements: 'Dificultad para delegar y dar feedback constructivo.'
+                },
+                recommendation: 'Iniciar un proceso de coaching en liderazgo y gestión de equipos para potenciar su rol de coordinador.',
+                nineBox: { performance: 2, potential: 2 } // Medium Perf, Medium Pot
+            }
+        },
+        // Función para renderizar una vista
+        renderView: function(viewName) {
+            if (this.views[viewName]) {
+                this.mainContent.innerHTML = this.views[viewName];
+                this.updateActiveLink(viewName);
+                lucide.createIcons();
+                this.initCharts(viewName);
+                if (viewName === 'reclutamiento') {
+                    this.setupRecruitmentListeners();
+                }
+                if (viewName === 'desempeno') {
+                    this.renderPerformanceList();
+                }
+            }
+        },
+        // --- NEW FUNCTIONS FOR PERFORMANCE MODULE ---
+        renderPerformanceList: function() {
+            const container = document.getElementById('performance-module');
+            const employees = Object.keys(this.performanceData);
+            let employeeListHTML = employees.map(key => {
+                const emp = this.performanceData[key];
+                const color = emp.statusColor === 'green' ? 'green' : 'yellow';
+                return `
+                <div class="bg-white p-4 rounded-lg shadow-sm flex items-center justify-between">
+                    <div class="flex items-center space-x-4">
+                        <img src="${emp.avatar}" alt="${emp.name}" class="rounded-full">
+                        <div>
+                            <p class="font-bold text-gray-800">${emp.name}</p>
+                            <p class="text-sm text-gray-500">${emp.position}</p>
+                        </div>
+                    </div>
+                    <div class="flex items-center space-x-4">
+                        <span class="bg-${color}-100 text-${color}-800 text-xs font-medium px-2.5 py-0.5 rounded-full">${emp.status}</span>
+                        <button data-employee-id="${key}" class="view-performance-btn bg-blue-100 text-blue-700 px-3 py-1 rounded-md text-sm font-semibold hover:bg-blue-200">Ver Detalles</button>
+                    </div>
+                </div>`;
+            }).join('');
+
+            container.innerHTML = `
+                <div class="flex justify-between items-center mb-6">
+                    <h1 class="text-3xl font-bold text-gray-800">Módulo de Desempeño</h1>
+                    <button class="bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg flex items-center hover:bg-blue-700 transition shadow hover:shadow-md">
+                        <i data-lucide="plus" class="w-5 h-5 mr-2"></i> Crear Nueva Evaluación
+                    </button>
+                </div>
+                <div class="space-y-4">
+                    ${employeeListHTML}
+                </div>
+            `;
+            lucide.createIcons();
+            document.querySelectorAll('.view-performance-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const employeeId = e.currentTarget.dataset.employeeId;
+                    this.renderPerformanceDetail(employeeId);
+                });
+            });
+        },
+        renderPerformanceDetail: function(employeeId) {
+            const emp = this.performanceData[employeeId];
+            if (!emp) return;
+
+            const container = document.getElementById('performance-module');
+            
+            const competenciesHTML = emp.competencies.map(c => `
+                <tr class="border-b">
+                    <td class="p-3 font-medium">${c.name}</td>
+                    <td class="p-3 text-center font-bold text-blue-600">${c.score}</td>
+                    <td class="p-3 text-gray-600">${c.obs}</td>
+                </tr>
+            `).join('');
+
+            const nineBoxGridHTML = this.createNineBoxGrid(emp.nineBox.performance, emp.nineBox.potential);
+
+            container.innerHTML = `
+                <div class="fade-in">
+                    <button id="back-to-perf-list" class="flex items-center text-sm text-gray-600 hover:text-black mb-4">
+                        <i data-lucide="arrow-left" class="w-4 h-4 mr-2"></i> Volver a la lista
+                    </button>
+                    <div class="bg-white rounded-xl shadow-md p-6">
+                        <div class="flex items-start justify-between mb-6 border-b pb-4">
+                            <div class="flex items-center space-x-4">
+                                <img src="${emp.avatar}" alt="${emp.name}" class="rounded-full">
+                                <div>
+                                    <h2 class="text-2xl font-bold text-gray-800">Evaluación de Desempeño: ${emp.name}</h2>
+                                    <p class="text-gray-500">${emp.position} • Antigüedad: ${emp.seniority} • Fecha: ${emp.date}</p>
+                                </div>
+                            </div>
+                            <span class="bg-${emp.statusColor}-100 text-${emp.statusColor}-800 font-semibold px-4 py-2 rounded-full">${emp.status}</span>
+                        </div>
+
+                        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                            <!-- Columna Izquierda: Matriz y Gráfico -->
+                            <div class="space-y-6">
+                                <div>
+                                    <h3 class="text-lg font-semibold mb-2 text-gray-700">Matriz de Talento (9-Box)</h3>
+                                    ${nineBoxGridHTML}
+                                </div>
+                                <div>
+                                    <h3 class="text-lg font-semibold mb-2 text-gray-700">Gráfico de Competencias</h3>
+                                    <div class="h-72">
+                                        <canvas id="competencyChart"></canvas>
+                                    </div>
+                                </div>
+                            </div>
+                            <!-- Columna Derecha: Tabla y Recomendaciones -->
+                            <div class="space-y-6">
+                                <h3 class="text-lg font-semibold text-gray-700">Evaluación por Competencias</h3>
+                                <div class="overflow-auto max-h-96">
+                                    <table class="w-full text-sm">
+                                        <thead class="bg-gray-100 sticky top-0">
+                                            <tr>
+                                                <th class="p-3 text-left font-semibold text-gray-600">Competencia</th>
+                                                <th class="p-3 text-center font-semibold text-gray-600">Nota</th>
+                                                <th class="p-3 text-left font-semibold text-gray-600">Observaciones</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>${competenciesHTML}</tbody>
+                                    </table>
+                                </div>
+                                <div class="bg-gray-50 p-4 rounded-lg">
+                                    <p class="font-bold">Síntesis:</p>
+                                    <ul class="list-disc list-inside text-sm text-gray-700 mt-2">
+                                        <li><span class="font-semibold">Fortalezas:</span> ${emp.summary.strengths}</li>
+                                        <li><span class="font-semibold">Aspectos a mejorar:</span> ${emp.summary.improvements}</li>
+                                    </ul>
+                                    <p class="font-bold mt-4">Recomendación:</p>
+                                    <p class="text-sm text-gray-700 mt-2">${emp.recommendation}</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            lucide.createIcons();
+            document.getElementById('back-to-perf-list').addEventListener('click', () => this.renderPerformanceList());
+            
+            // --- NEW TOOLTIP LOGIC ---
+            const tooltip = document.getElementById('nine-box-tooltip');
+            const tooltipTitle = document.getElementById('tooltip-title');
+            const tooltipContent = document.getElementById('tooltip-content');
+            
+            document.querySelectorAll('.nine-box-cell').forEach(cell => {
+                cell.addEventListener('mouseenter', (e) => {
+                    const target = e.currentTarget;
+                    tooltipTitle.textContent = target.dataset.tooltipTitle;
+                    tooltipContent.textContent = target.dataset.tooltipContent;
+                    
+                    tooltip.classList.remove('invisible', 'opacity-0');
+
+                    const rect = target.getBoundingClientRect();
+                    tooltip.style.left = `${rect.left + window.scrollX + rect.width / 2 - tooltip.offsetWidth / 2}px`;
+                    tooltip.style.top = `${rect.top + window.scrollY - tooltip.offsetHeight - 10}px`;
+                });
+
+                cell.addEventListener('mouseleave', () => {
+                    tooltip.classList.add('invisible', 'opacity-0');
+                });
+            });
+
+            this.initCharts('desempenoDetail', emp);
+        },
+        createNineBoxGrid: function(performance, potential) {
+             const labels = [
+                ['Enigma', 'Futura Estrella', 'Estrella'],
+                ['Dilema', 'Jugador Clave', 'Alto Potencial'],
+                ['Bajo Desempeño', 'Profesional Sólido', 'Alto Desempeño']
+            ];
+            const colors = [
+                ['bg-purple-200', 'bg-blue-300', 'bg-green-400'],
+                ['bg-orange-200', 'bg-blue-200', 'bg-green-300'],
+                ['bg-red-300', 'bg-orange-300', 'bg-green-200']
+            ];
+            const explanations = [
+                { title: 'Enigma', content: 'Alto potencial pero bajo desempeño. Investigar causas: ¿rol incorrecto, falta de motivación o herramientas?' },
+                { title: 'Futura Estrella', content: 'Alto potencial con desempeño en desarrollo. Necesitan coaching y nuevos desafíos para crecer.' },
+                { title: 'Estrella', content: 'Alto potencial y alto desempeño. Son los líderes del futuro. Hay que retenerlos y desarrollarlos.' },
+                { title: 'Dilema', content: 'Potencial medio con bajo desempeño. Requieren un plan de mejora de rendimiento claro.' },
+                { title: 'Jugador Clave', content: 'Potencial y desempeño medios. Son el corazón del equipo. Necesitan desarrollo de habilidades.' },
+                { title: 'Alto Potencial', content: 'Potencial medio con alto desempeño. Contribuyentes valiosos. Mantenerlos motivados.' },
+                { title: 'Bajo Desempeño', content: 'Bajo potencial y bajo desempeño. Requieren un plan de mejora estricto o considerar la desvinculación.' },
+                { title: 'Profesional Sólido', content: 'Bajo potencial con desempeño medio. Cumplen bien con su rol. Mantenerlos comprometidos.' },
+                { title: 'Alto Desempeño', content: 'Bajo potencial con alto desempeño. Expertos en su rol actual. Valorar su experiencia.' }
+            ];
+
+            // performance is column (1-3), potential is row (1-3)
+            // But CSS grid is row-major, so potential determines row, performance determines column
+            const p_col = performance - 1; // 0-indexed
+            const p_row = 3 - potential; // 0-indexed, inverted
+            
+            let cells = '';
+            for(let row = 0; row < 3; row++) {
+                for(let col = 0; col < 3; col++) {
+                    const isEmployeeCell = (row === p_row && col === p_col);
+                    const explanationIndex = row * 3 + col;
+                    const explanation = explanations[explanationIndex];
+
+                    cells += `
+                        <div class="nine-box-cell ${colors[row][col]} text-center" 
+                             data-tooltip-title="${explanation.title}" 
+                             data-tooltip-content="${explanation.content}">
+                            <span class="text-xs font-semibold text-gray-700">${labels[row][col]}</span>
+                            ${isEmployeeCell ? '<div class="employee-dot bg-blue-600 absolute"></div>' : ''}
+                        </div>`;
+                }
+            }
+
+            return `
+                <div class="relative">
+                    <div class="nine-box-grid">${cells}</div>
+                    <div class="absolute -bottom-6 left-0 right-0 text-center text-sm font-semibold text-gray-600">Desempeño →</div>
+                    <div class="absolute -left-12 top-0 bottom-0 text-center text-sm font-semibold text-gray-600" style="writing-mode: vertical-rl; transform: rotate(180deg);">Potencial →</div>
+                </div>
+            `;
+        },
+
+        // Función para actualizar el link activo en la sidebar
+        updateActiveLink: function(viewName) {
+            this.links.forEach(link => {
+                if (link.dataset.view === viewName) {
+                    link.classList.add('active');
+                } else {
+                    link.classList.remove('active');
+                }
+            });
+        },
+        // Inicializador de listeners para el módulo de reclutamiento
+        setupRecruitmentListeners: function() {
+            const tabs = document.querySelectorAll('.job-tab');
+            const tabContents = document.querySelectorAll('.job-tab-content');
+
+            tabs.forEach(tab => {
+                tab.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    
+                    tabs.forEach(item => item.classList.remove('active'));
+                    tab.classList.add('active');
+
+                    const tabId = tab.dataset.tab;
+                    tabContents.forEach(content => {
+                        if (content.id === `${tabId}Content`) {
+                            content.classList.remove('hidden');
+                        } else {
+                            content.classList.add('hidden');
+                        }
+                    });
+                });
+            });
+
+            // Activar la primera pestaña por defecto
+            if (tabs.length > 0) {
+                tabs[0].click();
+            }
+            
+            const candidateCards = document.querySelectorAll('[data-candidate]');
+            candidateCards.forEach(card => {
+                card.addEventListener('click', () => {
+                    const candidateId = card.dataset.candidate;
+                    this.showCandidateModal(candidateId);
+                });
+            });
+        },
+        // Función para mostrar el modal del candidato
+        showCandidateModal: function(candidateId) {
+            const data = this.candidateData[candidateId];
+            if (!data) return;
+
+            this.modal.querySelector('#modal-header').innerHTML = data.header;
+            this.modal.querySelector('#modal-body').innerHTML = data.body;
+            
+            this.modal.classList.remove('hidden');
+            setTimeout(() => {
+                this.modal.classList.add('opacity-100');
+                this.modal.querySelector('.transform').classList.remove('scale-95');
+            }, 10);
+
+            lucide.createIcons();
+
+            const closeModalBtn = this.modal.querySelector('#close-modal-btn');
+            closeModalBtn.onclick = () => this.hideCandidateModal();
+            this.modal.onclick = (e) => {
+                if(e.target === this.modal) this.hideCandidateModal();
+            }
+        },
+        // Función para ocultar el modal
+        hideCandidateModal: function() {
+            this.modal.classList.remove('opacity-100');
+            this.modal.querySelector('.transform').classList.add('scale-95');
+            setTimeout(() => {
+                this.modal.classList.add('hidden');
+            }, 300);
+        },
+        // Inicializador de gráficos
+        initCharts: function(viewName, data) {
+            Chart.helpers.each(Chart.instances, (instance) => {
+                instance.destroy();
+            });
+
+            if (viewName === 'dashboard') {
+                const hiringCtx = document.getElementById('hiringChart');
+                if (hiringCtx) {
+                    new Chart(hiringCtx, {
+                        type: 'bar',
+                        data: {
+                            labels: ['Mar', 'Jun', 'Jul', 'Sep', 'Oct'],
+                            datasets: [{
+                                label: 'Nuevas Contrataciones',
+                                data: [2, 1, 1, 1, 7],
+                                backgroundColor: 'rgba(59, 130, 246, 0.7)',
+                                borderColor: 'rgba(59, 130, 246, 1)',
+                                borderWidth: 1,
+                                borderRadius: 5
+                            }]
+                        },
+                        options: { scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } }, responsive: true, maintainAspectRatio: false }
+                    });
+                }
+                document.querySelectorAll('.view-risk-performance').forEach(btn => {
+                    btn.addEventListener('click', (e) => {
+                        const employeeId = e.currentTarget.dataset.employeeId;
+                        this.renderView('desempeno');
+                        // We need a slight delay for the view to render before we can click the button
+                        setTimeout(() => {
+                            const detailButton = document.querySelector(`.view-performance-btn[data-employee-id="${employeeId}"]`);
+                            if(detailButton) detailButton.click();
+                        }, 100);
+                    });
+                });
+            } else if (viewName === 'desempenoDetail') {
+                const competencyCtx = document.getElementById('competencyChart');
+                if (competencyCtx) {
+                    new Chart(competencyCtx, {
+                        type: 'radar',
+                        data: {
+                            labels: data.competencies.map(c => c.name),
+                            datasets: [{
+                                label: `Evaluación de ${data.name}`,
+                                data: data.competencies.map(c => c.score),
+                                fill: true,
+                                backgroundColor: 'rgba(59, 130, 246, 0.2)',
+                                borderColor: 'rgb(59, 130, 246)',
+                                pointBackgroundColor: 'rgb(59, 130, 246)',
+                            }]
+                        },
+                        options: { 
+                            scales: { 
+                                r: { 
+                                    beginAtZero: true, 
+                                    max: 5, 
+                                    stepSize: 1,
+                                    pointLabels: { font: { size: 11 } }
+                                } 
+                            }, 
+                            responsive: true, 
+                            maintainAspectRatio: false 
+                        }
+                    });
+                }
+            } else if (viewName === 'analytics') {
+                const turnoverCtx = document.getElementById('turnoverChart');
+                if (turnoverCtx) {
+                    new Chart(turnoverCtx, {
+                        type: 'line',
+                        data: {
+                            labels: ['Q1', 'Q2', 'Q3', 'Q4'],
+                            datasets: [
+                                { label: 'Técnica', data: [8, 12, 15, 18], borderColor: 'rgb(255, 99, 132)', tension: 0.1, pointBackgroundColor: 'rgb(255, 99, 132)'},
+                                { label: 'Comercial', data: [5, 6, 8, 7], borderColor: 'rgb(54, 162, 235)', tension: 0.1, pointBackgroundColor: 'rgb(54, 162, 235)'},
+                                { label: 'Administración', data: [2, 3, 2, 4], borderColor: 'rgb(75, 192, 192)', tension: 0.1, pointBackgroundColor: 'rgb(75, 192, 192)'}
+                            ]
+                        },
+                        options: { responsive: true, maintainAspectRatio: false }
+                    });
+                }
+                const satisfactionCtx = document.getElementById('satisfactionChart');
+                if(satisfactionCtx) {
+                    new Chart(satisfactionCtx, {
+                        type: 'doughnut',
+                        data: {
+                            labels: ['Satisfecho', 'Neutral', 'Insatisfecho'],
+                            datasets: [{
+                                label: 'Satisfacción',
+                                data: [65, 25, 10],
+                                backgroundColor: ['rgb(75, 192, 192)', 'rgb(255, 205, 86)', 'rgb(255, 99, 132)'],
+                                hoverOffset: 4
+                            }]
+                        },
+                        options: { responsive: true }
+                    });
+                }
+                const cohortCtx = document.getElementById('cohortChart');
+                 if (cohortCtx) {
+                    new Chart(cohortCtx, {
+                        type: 'bar',
+                        data: {
+                            labels: ['Desempeño Previo', 'Desempeño Post-Capacitación'],
+                            datasets: [
+                                { label: 'Grupo de Control', data: [3.1, 3.2], backgroundColor: 'rgba(255, 99, 132, 0.5)' },
+                                { label: 'Cohorte Capacitada', data: [3.0, 4.1], backgroundColor: 'rgba(54, 162, 235, 0.5)' }
+                            ]
+                        },
+                        options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true, max: 5 } } }
+                    });
+                }
+            }
+        },
+        // Setup de eventos
+        init: function() {
+            this.links.forEach(link => {
+                link.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    const viewName = e.currentTarget.dataset.view;
+                    this.renderView(viewName);
+                });
+            });
+            // Cargar vista inicial
+            this.renderView('dashboard');
+        }
+    };
+
+    app.init();
+});
+</script>
+</body>
+</html>
+
