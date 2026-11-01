@@ -42,7 +42,7 @@
     .grid{display:grid;gap:1rem}
     @media(min-width:768px){.grid-md-2{grid-template-columns:1fr 1fr}}
     @media(min-width:1024px){.grid-lg-3{grid-template-columns:1.2fr 1fr 1fr}}
-    .section{padding:56px 0}
+    .section{padding:56px 1rem;scroll-margin-top:64px}
 
     .card{background:linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.02)); border:1px solid var(--border); border-radius:18px}
     .card .hd{padding:1rem 1rem 0;font-weight:700}
@@ -54,7 +54,7 @@
 
     .pill{border:1px solid var(--border);border-radius:999px;padding:.4rem .7rem;display:inline-flex;align-items:center;gap:.4rem;font-size:.85rem;color:#cfd6e6}
 
-    .hero{padding:64px 0 24px}
+    .hero{padding:64px 1rem 24px}
     .hero .kicker{display:flex;flex-wrap:wrap;gap:.5rem;margin-top:14px}
 
     .sep{height:1px;background:linear-gradient(90deg,transparent,#263147,transparent); margin:8px auto; max-width:1120px}
@@ -80,6 +80,33 @@
 
     /* Footer */
     footer{border-top:1px solid var(--border); padding:24px 0; color:#a9b3c9}
+
+    /* Menú móvil */
+    .menu-btn{display:none;width:42px;height:42px;border-radius:12px;border:1px solid var(--border);background:transparent;color:var(--text);cursor:pointer;font-size:1.2rem}
+    .mobile-nav{display:none;border-top:1px solid rgba(255,255,255,.05);padding:.6rem 1rem 1rem}
+    .mobile-nav a:not(.btn){display:block;padding:.75rem .4rem;border-bottom:1px solid rgba(255,255,255,.05);color:#cfd6e6}
+    .mobile-nav .btn{width:100%;justify-content:center;margin-top:.6rem}
+    header.open .mobile-nav{display:block}
+
+    /* Ventana de contacto */
+    .modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.6);display:none;place-items:center;padding:1rem;z-index:100}
+    .modal-bg.show{display:grid}
+    .modal{width:min(520px,100%);background:var(--card);border:1px solid var(--border);border-radius:18px;padding:1.4rem;box-shadow:0 30px 80px rgba(0,0,0,.5)}
+    .modal h3{margin:0 0 .3rem;font-size:1.3rem}
+    .field{margin-top:.8rem}
+    .field label{display:block;font-size:.85rem;color:#cfd6e6;margin-bottom:.3rem}
+    .field input,.field textarea,.field select{width:100%;padding:.7rem .8rem;border-radius:12px;border:1px solid var(--border);background:#0d1118;color:var(--text);font:inherit}
+    .field input:focus,.field textarea:focus,.field select:focus{outline:2px solid var(--ring);border-color:transparent}
+    .field textarea{min-height:90px;resize:vertical}
+
+    /* Responsive */
+    @media (max-width:860px){
+      .hide-sm,.desk-only{display:none !important}
+      .menu-btn{display:inline-grid;place-items:center}
+      .stack-sm{grid-template-columns:1fr !important}
+      .hero{padding:40px 1rem 16px}
+      .section{padding:40px 1rem}
+    }
   </style>
 </head>
 <body>
@@ -99,11 +126,20 @@
         <span style="opacity:.4;margin:0 .6rem">•</span>
         <a href="#rrhh">RRHH</a>
       </nav>
-      <div style="display:flex;gap:.5rem">
-        <button class="btn ghost" type="button" aria-label="Iniciar sesión">Iniciar sesión</button>
-        <a class="btn primary" href="demo.html" role="button" aria-label="Solicitar demo">Solicitar demo</a>
+      <div style="display:flex;gap:.5rem;align-items:center">
+        <a class="btn ghost desk-only" href="sistema.html" role="button" aria-label="Iniciar sesión">Iniciar sesión</a>
+        <a class="btn primary desk-only" href="demo.html" role="button" aria-label="Solicitar demo">Solicitar demo</a>
+        <button class="menu-btn" type="button" aria-label="Abrir menú" aria-expanded="false" data-menu>☰</button>
       </div>
     </div>
+    <nav class="mobile-nav" aria-label="Menú">
+      <a href="#mision-vision">Misión & Visión</a>
+      <a href="#objetivos">Objetivos</a>
+      <a href="#modelo">Modelo</a>
+      <a href="#rrhh">RRHH</a>
+      <a class="btn" href="sistema.html">Iniciar sesión</a>
+      <a class="btn primary" href="demo.html">Solicitar demo</a>
+    </nav>
   </header>
 
   <section class="container hero grid grid-md-2">
@@ -124,7 +160,7 @@
     <div class="fade-up show" style="transition-delay:.12s">
       <div class="card">
         <div class="hd">Resumen de la empresa</div>
-        <div class="bd grid" style="grid-template-columns:1fr 1fr;gap:1rem">
+        <div class="bd grid stack-sm" style="grid-template-columns:1fr 1fr;gap:1rem">
           <div class="chip"><span class="cap">Nombre</span><strong>WorkNova</strong></div>
           <div class="chip"><span class="cap">Sector</span><span class="muted">Tecnología aplicada a RRHH</span></div>
           <div class="chip"><span class="cap">Alcance</span><span class="muted">LATAM (expansión a México)</span></div>
@@ -156,7 +192,7 @@
   <section id="modelo" class="section container">
     <h2 class="title-lg">🧭 Modelo de negocio</h2>
     <p class="muted" style="margin-top:-.2rem">Qué ofrecemos, a quién y cómo crecemos</p>
-    <div class="grid" style="grid-template-columns:2fr 1fr;gap:1rem">
+    <div class="grid stack-sm" style="grid-template-columns:2fr 1fr;gap:1rem">
       <div class="card fade-up">
         <div class="hd">🧩 Productos & Servicios</div>
         <div class="bd">
@@ -183,7 +219,7 @@
             </div>
           </div>
 
-          <div class="grid" style="grid-template-columns:repeat(3,1fr);gap:.8rem;margin-top:1rem">
+          <div class="grid stack-sm" style="grid-template-columns:repeat(3,1fr);gap:.8rem;margin-top:1rem">
             <div class="chip"><span class="cap">Clientes objetivo</span><strong>Empresas medianas y grandes en LATAM</strong></div>
             <div class="chip"><span class="cap">Ingresos</span><strong>SaaS por suscripción</strong><span class="muted">Mensual / anual</span></div>
             <div class="chip"><span class="cap">Servicios</span><strong>Consultoría a medida</strong><span class="muted">Tarifa por proyecto</span></div>
@@ -209,10 +245,10 @@
     <h2 class="title-lg">👥 Funcionamiento del área de RRHH</h2>
     <p class="muted" style="margin-top:-.2rem">Equipo actual, funciones y prácticas</p>
 
-    <div class="grid" style="grid-template-columns:2fr 1fr;gap:1rem">
+    <div class="grid stack-sm" style="grid-template-columns:2fr 1fr;gap:1rem">
       <div class="card fade-up">
         <div class="hd">Composición del equipo (3)</div>
-        <div class="bd grid grid-md-2" style="grid-template-columns:repeat(3,1fr)">
+        <div class="bd grid stack-sm" style="grid-template-columns:repeat(3,1fr)">
           <div class="chip"><strong>HR Manager</strong><span class="muted">Cultura y Talento interno. Estrategia, políticas y desarrollo.</span></div>
           <div class="chip"><strong>Reclutador/a Interno/a</strong><span class="muted">Cobertura de vacantes, hunting, entrevistas.</span></div>
           <div class="chip"><strong>Generalista de RRHH</strong><span class="muted">Onboarding, capacitación inicial, nómina/beneficios (con Finanzas).</span></div>
@@ -238,13 +274,30 @@
       <div class="hd" style="font-size:1.4rem">¿Listos para transformar tu gestión de talento?</div>
       <div class="bd">
         <div style="display:flex;gap:.6rem;justify-content:center;flex-wrap:wrap">
-          <a class="btn primary" href="#" role="button">🤝 Agendar reunión</a>
-          <a class="btn" href="#" role="button">↓ Descargar one‑pager</a>
+          <button class="btn primary" type="button" data-contacto>🤝 Agendar reunión</button>
+          <a class="btn" href="onepager.html" target="_blank" rel="noopener">↓ Descargar one‑pager</a>
         </div>
         <p class="muted" style="margin-top:.6rem">Implementación en semanas, no meses.</p>
       </div>
     </div>
   </section>
+
+  <div class="modal-bg" data-modal role="dialog" aria-modal="true" aria-labelledby="contacto-titulo">
+    <form class="modal" data-form>
+      <h3 id="contacto-titulo">Agendar una reunión</h3>
+      <p class="muted" style="margin:0">Dejanos tus datos y te respondemos para coordinar día y horario.</p>
+      <div class="field"><label for="c-nombre">Nombre y apellido</label><input id="c-nombre" name="nombre" required autocomplete="name"></div>
+      <div class="field"><label for="c-empresa">Empresa</label><input id="c-empresa" name="empresa" autocomplete="organization"></div>
+      <div class="field"><label for="c-email">Correo electrónico</label><input id="c-email" name="email" type="email" required autocomplete="email"></div>
+      <div class="field"><label for="c-interes">Me interesa</label><select id="c-interes" name="interes"><option>Plataforma (SaaS)</option><option>Consultoría</option><option>Ambas</option></select></div>
+      <div class="field"><label for="c-msg">Mensaje (opcional)</label><textarea id="c-msg" name="mensaje" placeholder="Cantidad de empleados, horarios que te quedan cómodos…"></textarea></div>
+      <div style="display:flex;gap:.6rem;justify-content:flex-end;margin-top:1.1rem;flex-wrap:wrap">
+        <button class="btn" type="button" data-cerrar>Cancelar</button>
+        <button class="btn primary" type="submit">Enviar solicitud</button>
+      </div>
+      <p class="muted" style="font-size:.8rem;margin:.8rem 0 0">Se abrirá tu programa de correo con el mensaje listo para enviar.</p>
+    </form>
+  </div>
 
   <footer>
     <div class="container" style="display:flex;align-items:center;justify-content:space-between;gap:.8rem;flex-wrap:wrap">
@@ -285,6 +338,33 @@
     }, {threshold: .08});
 
     document.querySelectorAll('.fade-up').forEach(el=>observer.observe(el));
+
+    // Menú móvil
+    const header = document.querySelector('header');
+    const menuBtn = document.querySelector('[data-menu]');
+    menuBtn.addEventListener('click', ()=>{
+      const abierto = header.classList.toggle('open');
+      menuBtn.setAttribute('aria-expanded', abierto); menuBtn.textContent = abierto ? '✕' : '☰';
+    });
+    document.querySelectorAll('.mobile-nav a').forEach(a=>a.addEventListener('click', ()=>{ header.classList.remove('open'); menuBtn.textContent='☰'; menuBtn.setAttribute('aria-expanded', false); }));
+
+    // Agendar reunión: arma un correo listo para enviar
+    const CONTACTO_EMAIL = 'contacto@worknova.com'; // ← cambiá esta dirección por la real
+    const modal = document.querySelector('[data-modal]');
+    const abrir = ()=>{ modal.classList.add('show'); document.getElementById('c-nombre').focus(); };
+    const cerrar = ()=> modal.classList.remove('show');
+    document.querySelectorAll('[data-contacto]').forEach(b=>b.addEventListener('click', abrir));
+    modal.querySelector('[data-cerrar]').addEventListener('click', cerrar);
+    modal.addEventListener('click', e=>{ if(e.target===modal) cerrar(); });
+    document.addEventListener('keydown', e=>{ if(e.key==='Escape') cerrar(); });
+    document.querySelector('[data-form]').addEventListener('submit', e=>{
+      e.preventDefault();
+      const f = Object.fromEntries(new FormData(e.target));
+      const asunto = `Solicitud de reunión – ${f.empresa || f.nombre}`;
+      const cuerpo = `Nombre: ${f.nombre}\nEmpresa: ${f.empresa || '-'}\nCorreo: ${f.email}\nInterés: ${f.interes}\n\n${f.mensaje || ''}`;
+      window.location.href = `mailto:${CONTACTO_EMAIL}?subject=${encodeURIComponent(asunto)}&body=${encodeURIComponent(cuerpo)}`;
+      cerrar(); e.target.reset();
+    });
   </script>
 </body>
 </html>

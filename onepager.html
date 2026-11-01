@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>WorkNova · One-pager</title>
+  <meta name="description" content="Resumen de una página de WorkNova: plataforma de talento + consultoría en RRHH." />
+  <style>
+    :root{ --primary:#4c8dff; --primary-2:#7a5cff; --text:#0f172a; --muted:#5b6478; --border:#e3e7ef; --soft:#f5f7fb; }
+    *{box-sizing:border-box}
+    body{margin:0;font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Inter,Arial;color:var(--text);background:#e9edf4}
+    .barra{position:sticky;top:0;display:flex;gap:.6rem;justify-content:center;padding:.8rem;background:#0b0d12;z-index:5}
+    .barra a,.barra button{display:inline-flex;align-items:center;gap:.4rem;padding:.6rem 1rem;border-radius:999px;border:1px solid #202636;background:transparent;color:#e8ecf5;font:inherit;cursor:pointer;text-decoration:none}
+    .barra button{background:linear-gradient(90deg,var(--primary),var(--primary-2));border-color:transparent;color:#fff}
+    .hoja{width:210mm;min-height:297mm;margin:1.5rem auto;background:#fff;padding:16mm 15mm;box-shadow:0 10px 40px rgba(15,23,42,.15);display:flex;flex-direction:column;gap:7mm}
+    .top{display:flex;justify-content:space-between;align-items:center;border-bottom:3px solid var(--primary);padding-bottom:5mm}
+    .marca{display:flex;align-items:center;gap:.6rem;font-weight:800;font-size:1.6rem}
+    .logo{width:34px;height:34px;border-radius:12px;background:conic-gradient(from 180deg at 50% 50%, var(--primary), var(--primary-2))}
+    .tag{font-size:.75rem;border:1px solid var(--border);border-radius:999px;padding:.15rem .55rem;color:var(--muted)}
+    h1{font-size:1.65rem;line-height:1.15;margin:0}
+    h1 span{background:linear-gradient(90deg,var(--primary),var(--primary-2));-webkit-background-clip:text;background-clip:text;color:transparent}
+    h2{font-size:.8rem;text-transform:uppercase;letter-spacing:.08em;color:var(--primary);margin:0 0 2.5mm}
+    p{margin:0;line-height:1.45;font-size:.92rem}
+    .muted{color:var(--muted)}
+    .g2{display:grid;grid-template-columns:1fr 1fr;gap:5mm}
+    .g3{display:grid;grid-template-columns:repeat(3,1fr);gap:4mm}
+    .g4{display:grid;grid-template-columns:repeat(4,1fr);gap:3mm}
+    .caja{background:var(--soft);border:1px solid var(--border);border-radius:10px;padding:4mm}
+    .caja b{display:block;font-size:.9rem;margin-bottom:1mm}
+    .caja small{color:var(--muted);font-size:.78rem;line-height:1.35;display:block}
+    ul{margin:0;padding-left:1.1rem;font-size:.9rem;line-height:1.5}
+    .cta{margin-top:auto;background:linear-gradient(90deg,var(--primary),var(--primary-2));color:#fff;border-radius:12px;padding:5mm 6mm;display:flex;justify-content:space-between;align-items:center;gap:4mm}
+    .cta b{font-size:1.05rem}
+    @media print{
+      @page{size:A4;margin:0}
+      body{background:#fff}
+      .barra{display:none}
+      .hoja{margin:0;box-shadow:none;width:auto;min-height:auto;height:297mm}
+      *{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+    }
+    @media screen and (max-width:820px){
+      .hoja{width:auto;min-height:auto;margin:1rem;padding:1.2rem}
+      .g2,.g3,.g4{grid-template-columns:1fr}
+      .cta{flex-direction:column;align-items:flex-start}
+    }
+  </style>
+</head>
+<body>
+  <div class="barra">
+    <a href="index.html">← Volver al sitio</a>
+    <button type="button" onclick="window.print()">↓ Descargar PDF</button>
+  </div>
+
+  <main class="hoja">
+    <div class="top">
+      <div class="marca"><div class="logo" aria-hidden="true"></div>WorkNova <span class="tag">HR Tech</span></div>
+      <span class="muted" style="font-size:.85rem">Plataforma + Consultoría · LATAM</span>
+    </div>
+
+    <section>
+      <h1>Tecnología que potencia <span>la gestión de personas</span></h1>
+      <p class="muted" style="margin-top:2mm">Plataforma integral de talento + consultoría experta para atraer, desarrollar y retener talento en Latinoamérica.</p>
+    </section>
+
+    <section class="g2">
+      <div><h2>Misión</h2><p>Impulsar el crecimiento de las organizaciones a través de soluciones innovadoras en gestión de talento humano, conectando tecnología y personas para crear entornos laborales más productivos y humanos.</p></div>
+      <div><h2>Visión</h2><p>Ser la startup líder en Latinoamérica en innovación para la gestión de personas, transformando la manera en que las empresas atraen, desarrollan y retienen talento.</p></div>
+    </section>
+
+    <section>
+      <h2>Software (SaaS)</h2>
+      <div class="g4">
+        <div class="caja"><b>Reclutamiento</b><small>ATS, publicación, filtros, entrevistas</small></div>
+        <div class="caja"><b>Capacitación</b><small>LMS, itinerarios, microlearning</small></div>
+        <div class="caja"><b>Desempeño</b><small>OKR/competencias, 360°, calibración</small></div>
+        <div class="caja"><b>People Analytics</b><small>Dashboards, cohortes, predicción</small></div>
+      </div>
+    </section>
+
+    <section>
+      <h2>Consultoría</h2>
+      <div class="g4">
+        <div class="caja"><b>Selección & Headhunting</b><small>Perfiles clave, assessment center</small></div>
+        <div class="caja"><b>Compensaciones & Beneficios</b><small>Bandas, equidad interna, paquetes</small></div>
+        <div class="caja"><b>Clima & Cultura</b><small>Encuestas, workshops, acción</small></div>
+        <div class="caja"><b>Desarrollo Organizacional</b><small>Mapa de talento, sucesión</small></div>
+      </div>
+    </section>
+
+    <section class="g2">
+      <div>
+        <h2>Propuesta de valor</h2>
+        <ul>
+          <li>Gobierno de datos seguro y cumplimiento.</li>
+          <li>Experiencia de empleado centrada en personas.</li>
+          <li>Decisiones basadas en analítica de talento.</li>
+          <li>Implementación ágil y escalable.</li>
+        </ul>
+      </div>
+      <div>
+        <h2>Objetivos a 3–5 años</h2>
+        <ul>
+          <li>Plataforma integral de talento (SaaS).</li>
+          <li>Expansión a México y LATAM.</li>
+          <li>Alianzas con universidades y empresas.</li>
+          <li>Rentabilidad sostenible en 36 meses.</li>
+        </ul>
+      </div>
+    </section>
+
+    <section class="g3">
+      <div class="caja"><small>Clientes objetivo</small><b>Empresas medianas y grandes en LATAM</b></div>
+      <div class="caja"><small>Ingresos</small><b>SaaS por suscripción</b><small>Mensual / anual</small></div>
+      <div class="caja"><small>Servicios</small><b>Consultoría a medida</b><small>Tarifa por proyecto</small></div>
+    </section>
+
+    <div class="cta">
+      <div><b>¿Listos para transformar tu gestión de talento?</b><div style="opacity:.9;font-size:.88rem">Implementación en semanas, no meses.</div></div>
+      <div style="font-size:.9rem;text-align:right">cesar385.github.io/workNova</div>
+    </div>
+  </main>
+</body>
+</html>
