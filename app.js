@@ -85,7 +85,7 @@ export const sesion = {
   get esAdmin() { return this.usuario?.rol === 'admin'; },
   get esGestor() { return ['admin', 'rrhh'].includes(this.usuario?.rol); },
   get esJefe() { const e = this.empleado; return this.esGestor || this.usuario?.rol === 'jefe' || (!!e && /director|gerente|jef|ceo|coordinador|responsable/i.test(e.puesto || '')); },
-  puede(vista) { const m = MENU.find((x) => x[0] === vista); const nivel = m ? m[3] : (vista === 'empleado' ? 'gestor' : 'todos'); return nivel === 'todos' || (nivel === 'gestor' && this.esGestor) || (nivel === 'admin' && this.esAdmin); },
+  puede(vista) { const m = MENU.find((x) => x[0] === vista); const nivel = m ? m[3] : (vista === 'empleado' ? 'gestor' : 'todos'); return nivel === 'todos' || (nivel === 'jefe' && this.esJefe) || (nivel === 'gestor' && this.esGestor) || (nivel === 'admin' && this.esAdmin); },
   entrar(id) { localStorage.setItem(SKEY, id); },
   salir() { localStorage.removeItem(SKEY); },
 };
@@ -95,6 +95,7 @@ export const sesion = {
 const MENU = [
   ['dashboard', 'Dashboard', 'layout-dashboard', 'gestor', 'General'],
   ['portal', 'Mi Portal', 'user', 'todos', 'General'],
+  ['area', 'Mi Área', 'building', 'jefe', 'General'],
   ['chat', 'Chat', 'message-square', 'todos', 'General'],
   ['calendario', 'Calendario', 'calendar-days', 'todos', 'General'],
   ['asistencia', 'Asistencia', 'clock', 'todos', 'General'],
@@ -195,7 +196,7 @@ function abrirMenu(tipo) {
     m.innerHTML = `<div style="padding:.5rem .7rem"><b>${esc(u.nombre)}</b><div class="muted" style="font-size:.8rem">${esc(u.email)}</div></div>
       <a href="#/portal">${icon('user')} Mi Portal</a>
       <button data-pass>${icon('key-round')} Cambiar contraseña</button>
-      <a href="../">${icon('house')} Página de inicio</a>
+      <a href="index.html">${icon('house')} Página de inicio</a>
       <button data-salir class="t-red">${icon('log-out')} Cerrar sesión</button>`;
   } else {
     const ns = db.where('notificaciones', (n) => n.usuario_id === u.id).sort((a, b) => b.fecha.localeCompare(a.fecha)).slice(0, 30);
@@ -235,7 +236,7 @@ function pantallaAuth(modo = 'login', error = '') {
     <div class="field"><label>Contraseña</label><input name="clave" type="password" required minlength="${registro ? 6 : 1}" autocomplete="${registro ? 'new-password' : 'current-password'}"></div>
     <button class="btn primary" style="width:100%">${registro ? 'Crear cuenta' : 'Ingresar'}</button>
     ${hayAdmin ? `<div class="switch">${registro ? '¿Ya tenés cuenta? <a data-m="login">Iniciá sesión</a>' : '¿No tenés cuenta? <a data-m="registro">Solicitá acceso</a>'}</div>` : ''}
-    <div class="switch"><a href="../">← Volver a la página de inicio</a></div>
+    <div class="switch"><a href="index.html">← Volver a la página de inicio</a></div>
   </form></div>`;
   refrescarIconos();
   app.querySelector('[data-m]')?.addEventListener('click', (e) => pantallaAuth(e.target.dataset.m));

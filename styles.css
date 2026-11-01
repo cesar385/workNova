@@ -334,3 +334,35 @@ kbd { font-family: inherit; font-size: .7rem; border: 1px solid var(--border); b
   .hbar { grid-template-columns: 1fr auto; } .hbar .bar { grid-column: 1 / -1; grid-row: 2; }
 }
 .tile.amber { background: linear-gradient(135deg, #f59e0b, #ea580c); }
+
+/* Portal Departamento */
+.dep-hero { display: flex; gap: 1.1rem; align-items: center; flex-wrap: wrap; background: linear-gradient(110deg, #312e81, #4f46e5 55%, #7c3aed); color: #fff; border-radius: var(--radius); padding: 1.4rem 1.6rem; }
+.dep-hero h2 { margin: .1rem 0 .4rem; font-size: 1.7rem; }
+.dep-hero small { opacity: .8; text-transform: uppercase; letter-spacing: .06em; font-size: .72rem; font-weight: 700; }
+.dep-hero-ico { width: 58px; height: 58px; border-radius: 16px; background: rgba(255,255,255,.15); display: grid; place-items: center; flex: none; }
+.dep-hero-ico [data-lucide] { width: 30px; height: 30px; }
+.dep-meta { display: flex; gap: 1.2rem; flex-wrap: wrap; font-size: .88rem; opacity: .95; }
+.dep-meta span { display: inline-flex; gap: .4rem; align-items: center; }
+.dep-meta [data-lucide] { width: 16px; height: 16px; }
+.dep-hero .btn { background: rgba(255,255,255,.14); color: #fff; border-color: rgba(255,255,255,.25); }
+.dep-hero .btn:hover { background: rgba(255,255,255,.24); }
+.dep-hero select { background: rgba(255,255,255,.95); color: #0f172a; }
+.dep-tabs { display: flex; overflow-x: auto; flex-wrap: nowrap; max-width: 100%; }
+.dep-tabs button { white-space: nowrap; }
+.tabs .badge-n { background: var(--bad); color: #fff; border-radius: 99px; font-size: .68rem; padding: 0 .4rem; }
+.mini-kpis { display: grid; grid-template-columns: repeat(3, 1fr); gap: .4rem; background: var(--soft2); border-radius: 10px; padding: .55rem; text-align: center; }
+.mini-kpis small { display: block; color: var(--muted); font-size: .7rem; }
+.mini-kpis b { font-size: .95rem; }
+table.matriz td, table.matriz th { text-align: center; } table.matriz td:first-child, table.matriz th:first-child { text-align: left; }
+table.semana td, table.semana th { text-align: center; white-space: nowrap; font-size: .82rem; } table.semana td:first-child, table.semana th:first-child { text-align: left; }
+.ok-cell { background: var(--ok-soft); color: var(--text); font-weight: 600; }
+.perm-cell { background: color-mix(in srgb, #a855f7 18%, var(--card)); }
+.bad-cell { background: var(--bad-soft); color: var(--bad); font-weight: 600; }
+.dep-chat .chat-main { height: calc(100vh - 380px); min-height: 380px; }
+.comunicado { border-left: 4px solid var(--primary); }
+.comunicado.importante { border-left-color: var(--warn); } .comunicado.urgente { border-left-color: var(--bad); }
+.comunicado.vencido { opacity: .6; }
+button.alert { font: inherit; color: inherit; }
+@media (max-width: 860px) { .dep-hero { padding: 1.1rem; } .dep-hero h2 { font-size: 1.35rem; } .dep-chat .chat-main { height: 65vh; } }
+.tabs a.tab-link { padding: .5rem 1rem; border-radius: 9px; font-weight: 600; color: var(--muted); display: inline-flex; gap: .45rem; align-items: center; }
+.tabs a.tab-link.on { background: var(--card); color: var(--text); box-shadow: 0 1px 3px rgba(0,0,0,.08); }

@@ -345,7 +345,8 @@ function permisos(c) {
 let qEval = '';
 async function editarEvaluacion(v = null, dep = null) {
   const opts = [['', '— Seleccionar —'], ...db.where('empleados', (e) => !dep || e.departamento === dep).map((e) => [e.id, e.nombre_completo])];
-  const r = await formulario({ titulo: v ? 'Editar evaluación' : 'Nueva evaluación', ancho: true, valores: v || { evaluador: sesion.usuario.nombre, fecha: hoyISO(), estado: 'pendiente' }, campos: [
+  const esNueva = !v || v._nuevo;
+  const r = await formulario({ titulo: esNueva ? 'Nueva evaluación' : 'Editar evaluación', ancho: true, valores: v || { evaluador: sesion.usuario.nombre, fecha: hoyISO(), estado: 'pendiente' }, campos: [
     { k: 'empleado_id', label: 'Empleado', type: 'select', options: opts, req: true }, { k: 'evaluador', label: 'Evaluador', req: true },
     { k: 'fecha', label: 'Fecha', type: 'date' }, { k: 'periodo', label: 'Período (ej. Q1 2026)', req: true },
     { sec: 'Puntuaciones (0 a 10)', color: 't' },
@@ -359,7 +360,7 @@ async function editarEvaluacion(v = null, dep = null) {
   const notas = ['tecnicas', 'blandas', 'liderazgo', 'equipo'].map((k) => r[k]).filter((x) => x !== null);
   if (r.general === null && notas.length) r.general = Math.round((notas.reduce((a, b) => a + b, 0) / notas.length) * 10) / 10;
   r.empleado = nombreEmp(r.empleado_id);
-  v ? db.update('evaluaciones', v.id, r) : db.create('evaluaciones', r);
+  esNueva ? db.create('evaluaciones', r) : db.update('evaluaciones', v.id, r);
   if (r.estado === 'completada' && r.general !== null) db.update('empleados', r.empleado_id, { desempeno: r.general });
   const u = usuarioDeEmpleado(r.empleado_id); if (u && r.estado === 'completada') notificar(u.id, `Tu evaluación de desempeño ${r.periodo} está disponible.`);
   toast('Evaluación guardada'); render();
@@ -659,7 +660,7 @@ function chat(c) {
 }
 
 // ---------- MI PORTAL ----------
-let tabPortal = 'personal', tabDep = 'dashboard', depElegido = null;
+let usuarioPortal = null;
 const FUNCIONES = {
   'Tecnología': ['Mantener y evolucionar la infraestructura tecnológica', 'Liderar proyectos de desarrollo e innovación', 'Garantizar la seguridad de la información'],
   'Recursos Humanos': ['Gestionar el ciclo de vida del colaborador', 'Impulsar la cultura y el clima organizacional', 'Coordinar capacitaciones y evaluaciones'],
@@ -667,13 +668,14 @@ const FUNCIONES = {
   'Finanzas y Administración': ['Controlar el presupuesto y los flujos de fondos', 'Gestionar liquidaciones y pagos', 'Elaborar reportes financieros'],
   'Consultoría': ['Diagnosticar necesidades de los clientes', 'Diseñar e implementar soluciones de RR.HH.', 'Dar seguimiento a los resultados'],
 };
-function portal(c) {
+function portal(c, params = [], modo = 'personal') {
   const u = sesion.usuario; const emp = sesion.empleado;
-  c.innerHTML = header('Mi Portal', `Bienvenido/a, ${u.nombre}`) +
-    (sesion.esJefe ? `<div class="tabs"><button data-pt="personal" class="${tabPortal === 'personal' ? 'on' : ''}">${icon('user')} Portal Personal</button><button data-pt="depto" class="${tabPortal === 'depto' ? 'on' : ''}">${icon('building')} Portal Departamento</button></div>` : '') + '<div data-pc></div>';
-  on(c, '[data-pt]', 'click', (b) => { tabPortal = b.dataset.pt; render(); });
+  if (usuarioPortal !== u.id) { usuarioPortal = u.id; tabDep = 'resumen'; depElegido = null; semanaDep = 0; }
+  const depto = modo === 'depto' && sesion.esJefe;
+  c.innerHTML = header(depto ? 'Mi Área' : 'Mi Portal', `Bienvenido/a, ${u.nombre}`) +
+    (sesion.esJefe ? `<div class="tabs"><a href="#/portal" class="tab-link ${!depto ? 'on' : ''}">${icon('user')} Portal Personal</a><a href="#/area" class="tab-link ${depto ? 'on' : ''}">${icon('building')} Portal Departamento</a></div>` : '') + '<div data-pc></div>';
   const pc = c.querySelector('[data-pc]');
-  if (tabPortal === 'depto' && sesion.esJefe) return portalDepartamento(pc);
+  if (depto) return portalDepartamento(pc);
   if (!emp) { pc.innerHTML = `<div class="card card-pad">${vacio(sesion.esGestor ? 'Tu usuario no está asociado a un empleado. Asocialo desde "Aprobación Usuarios" → Aprobados → Editar.' : 'Tu usuario todavía no está asociado a un empleado. Pedile a Recursos Humanos que lo vincule.', 'user-x')}</div>`; return; }
   const mios = db.where('permisos', (p) => p.empleado_id === emp.id).sort((a, b) => (b.fecha || '').localeCompare(a.fecha || ''));
   const objs = db.where('objetivos', (o) => o.empleado_id === emp.id);
@@ -685,6 +687,8 @@ function portal(c) {
       <button class="tile blue" data-datos>${icon('user')}<b>Mis Datos</b><small>Actualizar información personal</small></button>
       <button class="tile green" data-objs>${icon('target')}<b>Mis Objetivos</b><small>${objs.filter((o) => o.estado === 'en progreso').length} activos</small></button>
       <a class="tile amber" href="#/asistencia">${icon('clock')}<b>Fichar</b><small>${fichadaAbierta(emp.id) ? 'Entrada registrada · marcar salida' : 'Registrar entrada'}</small></a></div>
+    ${(() => { const cs = comunicadosPara(emp).filter((x) => !x.vence || x.vence >= hoyISO()); const sinLeer = cs.filter((x) => !(x.leido_por || []).includes(emp.id)).length;
+      return cs.length ? `<div class="mb"><div class="row between" style="margin-bottom:.6rem"><h3 class="row" style="margin:0">${icon('megaphone')} Comunicados de ${esc(emp.departamento)}</h3>${sinLeer ? `<span class="pill warn">${sinLeer} sin leer</span>` : '<span class="pill ok">Todo leído</span>'}</div>${cs.slice(0, 3).map((x) => tarjetaComunicado(x, { emp })).join('')}</div>` : ''; })()}
     <div class="card card-pad mb"><div class="row between"><h3 class="row" style="margin:0">${icon('briefcase')} Funciones de mi Puesto</h3><span class="pill">${esc(emp.puesto)}</span></div><p class="muted">Responsabilidades asignadas a tu rol en el área de ${esc(emp.departamento)}</p>
       ${(FUNCIONES[emp.departamento] || ['Cumplir con las responsabilidades asignadas por la dirección', 'Mantener comunicación fluida con el equipo', 'Contribuir a los objetivos del área']).map((f) => `<div class="list-row">${icon('circle-check')}<div class="grow">${esc(f)}</div></div>`).join('')}</div>
     <div class="grid g2 mb"><div class="card card-pad"><h3>Mis Solicitudes de Permiso</h3>${mios.length ? mios.map((p) => `<div class="list-row"><div class="grow"><b>${esc(p.tipo)}</b><small>${fecha(p.desde)} → ${fecha(p.hasta)}${p.comentario ? ' · ' + esc(p.comentario) : ''}</small></div>${estadoPill(p.estado)}</div>`).join('') : vacio('No tenés solicitudes de permiso')}</div>
@@ -705,64 +709,241 @@ function portal(c) {
     listaObjetivos(m.querySelector('[data-l]'), (o) => o.empleado_id === emp.id, true); refrescarIconos();
     m.querySelector('[data-nuevo]').onclick = () => { m.remove(); editarObjetivo(null, null, emp.id); };
   };
+  on(pc, '[data-leer]', 'click', (b) => { const x = db.get('comunicados', b.dataset.leer); db.update('comunicados', x.id, { leido_por: [...new Set([...(x.leido_por || []), emp.id])] }); render(); });
   on(pc, '[data-rec]', 'click', (b) => verRecibo(db.get('recibos', b.dataset.rec)));
   on(pc, '[data-ev]', 'click', (b) => { const v = db.get('evaluaciones', b.dataset.ev); verModal(`Evaluación ${v.periodo}`, detalleEvaluacion(v)); });
 }
 
+// ---------- PORTAL DEPARTAMENTO ----------
+const PRIORIDADES = [['normal', 'Normal'], ['importante', 'Importante'], ['urgente', 'Urgente']];
+const prioPill = (p) => `<span class="pill ${p === 'urgente' ? 'bad' : p === 'importante' ? 'warn' : ''}">${esc(PRIORIDADES.find((x) => x[0] === p)?.[1] || 'Normal')}</span>`;
+function estadoHoy(e) {
+  const hoy = hoyISO();
+  const regs = db.where('asistencia', (a) => a.empleado_id === e.id && a.fecha === hoy);
+  const perm = db.where('permisos', (p) => p.empleado_id === e.id && p.estado === 'aprobado' && p.desde <= hoy && p.hasta >= hoy)[0];
+  if (e.estado === 'licencia') return ['violet', 'De licencia'];
+  if (regs.some((a) => !a.salida)) return ['ok', 'Trabajando'];
+  if (regs.length) return ['info', 'Ya se retiró'];
+  if (perm) return ['violet', perm.tipo];
+  if (db.where('feriados', (f) => f.fecha === hoy).length) return ['', 'Feriado'];
+  if ([0, 6].includes(new Date().getDay())) return ['', 'Fin de semana'];
+  return ['warn', 'Sin fichar'];
+}
+const diasDesde = (f) => f ? Math.floor((Date.now() - new Date(f + (f.length === 10 ? 'T12:00:00' : ''))) / 864e5) : Infinity;
+const antiguedad = (f) => { if (!f) return '—'; const a = diasDesde(f) / 365.25; return a >= 1 ? `${Math.floor(a)} año${Math.floor(a) === 1 ? '' : 's'}` : `${Math.max(0, Math.floor(diasDesde(f) / 30))} meses`; };
+const ultimaEval = (id) => db.where('evaluaciones', (v) => v.empleado_id === id).sort((a, b) => (b.fecha || '').localeCompare(a.fecha || ''))[0];
+function comunicadosPara(emp) { return db.where('comunicados', (x) => x.departamento === emp?.departamento || x.departamento === 'Todos').sort((a, b) => (b.fijado ? 1 : 0) - (a.fijado ? 1 : 0) || b.fecha.localeCompare(a.fecha)); }
+
+async function nuevoComunicado(dep, previo = null) {
+  const r = await formulario({ titulo: previo ? 'Editar comunicado' : `Nuevo comunicado · ${dep}`, valores: previo || { prioridad: 'normal' }, campos: [
+    { k: 'titulo', label: 'Título', req: true, full: true }, { k: 'texto', label: 'Mensaje', type: 'textarea', req: true, full: true },
+    { k: 'prioridad', label: 'Prioridad', type: 'select', options: PRIORIDADES }, { k: 'vence', label: 'Visible hasta (opcional)', type: 'date' },
+    { k: 'fijado', label: 'Fijar arriba de todo', type: 'checkbox', full: true }], guardar: previo ? 'Guardar' : 'Publicar' });
+  if (!r) return;
+  if (previo) { db.update('comunicados', previo.id, r); toast('Comunicado actualizado'); return render(); }
+  db.create('comunicados', { ...r, departamento: dep, autor: sesion.usuario.nombre, autor_id: sesion.usuario.id, fecha: new Date().toISOString(), leido_por: [] });
+  db.where('empleados', (e) => e.departamento === dep).forEach((e) => { const u = usuarioDeEmpleado(e.id); if (u && u.id !== sesion.usuario.id) notificar(u.id, `Nuevo comunicado de ${dep}: ${r.titulo}`); });
+  toast('Comunicado publicado'); render();
+}
+function tarjetaComunicado(x, { gestion = false, emp = null, total = 0 } = {}) {
+  const leido = emp && (x.leido_por || []).includes(emp.id);
+  const vencido = x.vence && x.vence < hoyISO();
+  return `<div class="card card-pad mb comunicado ${x.prioridad || ''} ${vencido ? 'vencido' : ''}">
+    <div class="row between" style="align-items:flex-start"><div><div class="row">${x.fijado ? icon('pin') : ''}<b style="font-size:1.05rem">${esc(x.titulo)}</b>${prioPill(x.prioridad)}${vencido ? '<span class="pill">Vencido</span>' : ''}</div><small class="muted">${esc(x.autor)} · ${fechaHora(x.fecha)}${x.departamento === 'Todos' ? ' · Toda la empresa' : ''}</small></div>
+      ${gestion ? `<div class="row"><button class="btn sm btn-icon" data-edc="${x.id}" title="Editar">${icon('pencil')}</button><button class="btn sm btn-icon danger" data-delc="${x.id}" title="Eliminar">${icon('trash-2')}</button></div>` : ''}</div>
+    <p style="white-space:pre-wrap;margin:.7rem 0">${esc(x.texto)}</p>
+    ${gestion ? `<button class="btn sm" data-lect="${x.id}">${icon('eye')} Leído por ${(x.leido_por || []).length} de ${total}</button>` : emp ? (leido ? `<span class="pill ok">${icon('check')} Leído</span>` : `<button class="btn sm primary" data-leer="${x.id}">${icon('check')} Marcar como leído</button>`) : ''}</div>`;
+}
+
+let tabDep = 'resumen', depElegido = null;
 function portalDepartamento(c) {
-  const emp = sesion.empleado;
+  const emp = sesion.empleado; const u = sesion.usuario;
   const dep = sesion.esGestor ? (depElegido || emp?.departamento || DEPARTAMENTOS[0]) : emp?.departamento;
-  if (!dep) { c.innerHTML = vacio('Tu usuario no tiene un departamento asignado.'); return; }
-  const tabs = [['dashboard', 'Dashboard', 'layout-dashboard'], ['chat', 'Chat', 'message-square'], ['equipo', 'Empleados a cargo', 'users'], ['reclutamiento', 'Reclutamiento', 'briefcase'], ['permisos', 'Permisos', 'calendar'], ['evaluaciones', 'Evaluaciones', 'award'], ['objetivos', 'Objetivos del Área', 'target'], ['capacitacion', 'Capacitación', 'graduation-cap'], ['aprobaciones', 'Aprobaciones', 'square-check-big']];
-  c.innerHTML = `<div class="row between mb"><h2 style="margin:0">${esc(dep)}</h2>${sesion.esGestor ? `<select data-dep style="width:auto">${DEPARTAMENTOS.map((d) => `<option ${d === dep ? 'selected' : ''}>${esc(d)}</option>`).join('')}</select>` : ''}</div>
-    <div class="tabs">${tabs.map(([k, l, i]) => `<button data-dt="${k}" class="${tabDep === k ? 'on' : ''}">${icon(i)} ${l}</button>`).join('')}</div><div data-dc></div>`;
-  c.querySelector('[data-dep]')?.addEventListener('change', (e) => { depElegido = e.target.value; render(); });
-  on(c, '[data-dt]', 'click', (b) => { if (b.dataset.dt === 'chat') { abrirCanal(dep); return; } tabDep = b.dataset.dt; render(); });
-  const dc = c.querySelector('[data-dc]');
-  const equipo = db.where('empleados', (e) => e.departamento === dep);
+  if (!dep) { c.innerHTML = `<div class="card card-pad">${vacio('Tu usuario no tiene un departamento asignado.', 'building')}</div>`; return; }
+  const equipo = db.where('empleados', (e) => e.departamento === dep && e.estado !== 'inactivo');
   const ids = new Set(equipo.map((e) => e.id));
+  const jefeArea = equipo.find((e) => !ids.has(e.jefe_id)) || equipo[0];
+  // Un jefe no resuelve sus propias solicitudes: esas van a RR.HH. / Administración
+  const propio = (x) => !sesion.esGestor && emp && (x.empleado_id === emp.id || x.subido_por_id === u.id);
+  const pendP = db.where('permisos', (p) => p.departamento === dep && p.estado === 'pendiente' && !propio(p));
+  const pendD = db.where('documentos', (d) => d.departamento === dep && d.estado === 'pendiente' && !propio(d));
+  const nPend = pendP.length + pendD.length;
+  const tabs = [['resumen', 'Resumen', 'layout-dashboard'], ['equipo', 'Equipo', 'users'], ['asistencia', 'Asistencia', 'clock'], ['comunicados', 'Comunicados', 'megaphone'], ['chat', 'Chat del área', 'message-square'],
+    ['aprobaciones', `Aprobaciones${nPend ? ` <span class="badge-n">${nPend}</span>` : ''}`, 'square-check-big'], ['permisos', 'Permisos', 'calendar'], ['evaluaciones', 'Evaluaciones', 'award'],
+    ['objetivos', 'Objetivos', 'target'], ['capacitacion', 'Capacitación', 'graduation-cap'], ['reclutamiento', 'Reclutamiento', 'briefcase']];
+  if (!tabs.some(([k]) => k === tabDep)) tabDep = 'resumen';
+  c.innerHTML = `<div class="dep-hero mb"><div class="dep-hero-ico">${icon('building-2')}</div><div style="flex:1;min-width:0"><small>Portal del departamento</small><h2>${esc(dep)}</h2>
+      <div class="dep-meta">${jefeArea ? `<span>${icon('user-round')} Responsable: <b>${esc(jefeArea.nombre_completo)}</b></span>` : ''}<span>${icon('users')} ${equipo.length} integrante${equipo.length === 1 ? '' : 's'}</span>${nPend ? `<span>${icon('bell-ring')} ${nPend} pendiente${nPend === 1 ? '' : 's'}</span>` : ''}</div></div>
+      <div class="row no-print">${sesion.esGestor ? `<select data-dep style="width:auto">${DEPARTAMENTOS.map((d) => `<option ${d === dep ? 'selected' : ''}>${esc(d)}</option>`).join('')}</select>` : ''}<button class="btn" data-informe>${icon('file-spreadsheet')} Informe del área</button></div></div>
+    <div class="tabs dep-tabs">${tabs.map(([k, l, i]) => `<button data-dt="${k}" class="${tabDep === k ? 'on' : ''}">${icon(i)} ${l}</button>`).join('')}</div><div data-dc></div>`;
+  c.querySelector('[data-dep]')?.addEventListener('change', (e) => { depElegido = e.target.value; render(); });
+  on(c, '[data-dt]', 'click', (b) => { tabDep = b.dataset.dt; render(); });
+  c.querySelector('[data-informe]').onclick = () => descargarCSV(`informe-${dep.toLowerCase().replace(/\s+/g, '-')}`,
+    ['Empleado', 'Puesto', 'Estado hoy', 'Antigüedad', 'Desempeño', 'Última evaluación', 'Objetivos activos', 'Días de permiso en el año', 'Capacitaciones'],
+    equipo.map((e) => { const ev = ultimaEval(e.id); const anio = String(new Date().getFullYear()); return [e.nombre_completo, e.puesto, estadoHoy(e)[1], antiguedad(e.fecha_ingreso), e.desempeno, ev ? `${ev.periodo} (${ev.general ?? '—'})` : 'Nunca', db.where('objetivos', (o) => o.empleado_id === e.id && o.estado === 'en progreso').length, db.where('permisos', (p) => p.empleado_id === e.id && p.estado === 'aprobado' && (p.desde || '').startsWith(anio)).reduce((a, p) => a + (p.dias || 0), 0), db.where('capacitaciones', (x) => (x.inscriptos || []).includes(e.id)).map((x) => x.titulo)]; }));
+  const dc = c.querySelector('[data-dc]');
+  const hoy = hoyISO();
   switch (tabDep) {
-    case 'equipo':
-      dc.innerHTML = equipo.length ? `<div class="grid g3">${equipo.map((e) => `<div class="card emp-card"><div class="emp-head"><span class="avatar lg">${inicial(e.nombre_completo)}</span><div style="flex:1"><b>${esc(e.nombre_completo)}</b><small>${esc(e.puesto)}</small></div>${estadoPill(e.estado)}</div><div class="emp-info"><div>${icon('mail')}<span>${esc(e.email)}</span></div><div>${icon('phone')}<span>${esc(e.telefono || '—')}</span></div><div>${icon('star')}<span>Desempeño ${e.desempeno ?? '—'}/10</span></div></div><button class="btn sm" data-ficha="${e.id}">${icon('eye')} Ver ficha</button></div>`).join('')}</div>` : vacio('No hay empleados en el área');
+    case 'equipo': {
+      const habilidades = [...new Set(equipo.flatMap((e) => e.habilidades || []))].sort();
+      dc.innerHTML = (equipo.length ? `<div class="grid g3 mb">${equipo.map((e) => {
+        const est = estadoHoy(e); const ev = ultimaEval(e.id); const objs = db.where('objetivos', (o) => o.empleado_id === e.id && o.estado === 'en progreso');
+        const usr = usuarioDeEmpleado(e.id);
+        return `<div class="card emp-card"><div class="emp-head"><span class="avatar lg">${inicial(e.nombre_completo)}</span><div style="flex:1;min-width:0"><b>${esc(e.nombre_completo)}</b><small>${esc(e.puesto)}</small></div><span class="pill ${est[0]}">${esc(est[1])}</span></div>
+          <div class="mini-kpis"><div><small>Antigüedad</small><b>${antiguedad(e.fecha_ingreso)}</b></div><div><small>Desempeño</small><b>${e.desempeno ?? '—'}</b></div><div><small>Objetivos</small><b>${objs.length}</b></div></div>
+          <div class="emp-info"><div>${icon('mail')}<span>${esc(e.email)}</span></div><div>${icon('award')}<span>${ev ? `Última evaluación: ${esc(ev.periodo)}` : '<span class="t-amber">Sin evaluaciones</span>'}</span></div></div>
+          <div class="row" style="margin-top:auto"><button class="btn sm" data-ficha="${e.id}">${icon('eye')} Ficha</button><button class="btn sm" data-obj="${e.id}" title="Asignar objetivo">${icon('target')}</button><button class="btn sm" data-eval="${e.id}" title="Evaluar">${icon('award')}</button>${usr && usr.id !== u.id ? `<button class="btn sm" data-msg="${usr.id}" title="Enviar mensaje">${icon('message-circle')}</button>` : ''}</div></div>`;
+      }).join('')}</div>` : `<div class="card">${vacio('No hay empleados en el área', 'users')}</div>`) +
+        (habilidades.length ? `<div class="card card-pad"><h3 class="row">${icon('grid-3x3')} Matriz de habilidades</h3><p class="muted" style="margin-top:0">Qué sabe hacer cada integrante. Sirve para detectar dependencias de una sola persona.</p><div class="table-wrap"><table class="matriz"><tr><th>Habilidad</th>${equipo.map((e) => `<th title="${esc(e.nombre_completo)}">${esc(e.nombre_completo.split(' ')[0])}</th>`).join('')}<th>Cubierta por</th></tr>
+          ${habilidades.map((h) => { const n = equipo.filter((e) => (e.habilidades || []).includes(h)).length; return `<tr><td>${esc(h)}</td>${equipo.map((e) => `<td>${(e.habilidades || []).includes(h) ? `<span class="t-green">${icon('circle-check')}</span>` : ''}</td>`).join('')}<td><span class="pill ${n === 1 ? 'warn' : 'ok'}">${n} ${n === 1 ? 'persona' : 'personas'}</span></td></tr>`; }).join('')}</table></div></div>` : '');
       on(dc, '[data-ficha]', 'click', (b) => { const e = db.get('empleados', b.dataset.ficha); verModal(e.nombre_completo, fichaEmpleado(e)); });
+      on(dc, '[data-obj]', 'click', (b) => editarObjetivo(null, dep, b.dataset.obj));
+      on(dc, '[data-eval]', 'click', (b) => editarEvaluacion({ empleado_id: b.dataset.eval, evaluador: u.nombre, fecha: hoy, estado: 'pendiente', _nuevo: true }, dep));
+      on(dc, '[data-msg]', 'click', (b) => abrirDirecto(b.dataset.msg));
       break;
+    }
+    case 'asistencia': {
+      const lunes = new Date(); lunes.setDate(lunes.getDate() - ((lunes.getDay() + 6) % 7) + semanaDep * 7);
+      const dias = [...Array(7)].map((_, i) => { const d = new Date(lunes); d.setDate(lunes.getDate() + i); return d; });
+      const iso = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+      const celda = (e, k) => {
+        const regs = db.where('asistencia', (a) => a.empleado_id === e.id && a.fecha === k); const h = regs.reduce((s, a) => s + horasEntre(a.entrada, a.salida), 0);
+        if (regs.length) return `<td class="ok-cell" title="${regs.map((a) => `${hhmm(a.entrada)}–${hhmm(a.salida)}`).join(', ')}">${regs.some((a) => !a.salida) ? 'En curso' : fmtHoras(h)}</td>`;
+        const p = db.where('permisos', (x) => x.empleado_id === e.id && x.estado === 'aprobado' && x.desde <= k && x.hasta >= k)[0];
+        if (p) return `<td class="perm-cell" title="${esc(p.tipo)}">${esc(p.tipo.split(' ')[0])}</td>`;
+        if (db.where('feriados', (f) => f.fecha === k).length) return '<td class="muted">Feriado</td>';
+        const d = new Date(k + 'T12:00:00').getDay(); if (d === 0 || d === 6) return '<td class="muted">—</td>';
+        // Sólo cuenta como ausencia desde que la persona empezó a fichar (antes no hay registro posible)
+        const primera = db.where('asistencia', (x) => x.empleado_id === e.id).map((x) => x.fecha).sort()[0];
+        return primera && k < hoy && k > primera ? '<td class="bad-cell">Ausente</td>' : '<td class="muted">·</td>';
+      };
+      const totalSemana = (e) => dias.reduce((s, d) => s + db.where('asistencia', (a) => a.empleado_id === e.id && a.fecha === iso(d)).reduce((x, a) => x + horasEntre(a.entrada, a.salida), 0), 0);
+      const presentes = equipo.filter((e) => ['Trabajando', 'Ya se retiró'].includes(estadoHoy(e)[1])).length;
+      dc.innerHTML = `<div class="grid g3 mb">${statTxt('Presentes hoy', `${presentes}/${equipo.length}`, 'user-check', 't-green')}${statTxt('Sin fichar hoy', equipo.filter((e) => estadoHoy(e)[1] === 'Sin fichar').length, 'user-x', 't-amber')}${statTxt('Ausentes con permiso', equipo.filter((e) => estadoHoy(e)[0] === 'violet').length, 'calendar-off', 't-violet')}</div>
+        <div class="card"><div class="toolbar"><h3 style="margin:0;flex:1">Semana del ${dias[0].toLocaleDateString('es-AR', { day: 'numeric', month: 'long' })}</h3><button class="btn sm" data-sem="-1">${icon('chevron-left')}</button><button class="btn sm" data-sem="0">Esta semana</button><button class="btn sm" data-sem="1">${icon('chevron-right')}</button></div>
+        <div class="table-wrap"><table class="semana"><tr><th>Empleado</th>${dias.map((d) => `<th class="${iso(d) === hoy ? 't-indigo' : ''}">${d.toLocaleDateString('es-AR', { weekday: 'short', day: 'numeric' })}</th>`).join('')}<th>Total</th></tr>
+        ${equipo.map((e) => `<tr><td><b>${esc(e.nombre_completo)}</b></td>${dias.map((d) => celda(e, iso(d))).join('')}<td><b>${fmtHoras(totalSemana(e))}</b></td></tr>`).join('')}</table></div></div>`;
+      on(dc, '[data-sem]', 'click', (b) => { semanaDep = b.dataset.sem === '0' ? 0 : semanaDep + Number(b.dataset.sem); render(); });
+      break;
+    }
+    case 'comunicados': {
+      const cs = db.where('comunicados', (x) => x.departamento === dep).sort((a, b) => (b.fijado ? 1 : 0) - (a.fijado ? 1 : 0) || b.fecha.localeCompare(a.fecha));
+      dc.innerHTML = `<div class="row mb" style="justify-content:space-between"><p class="muted" style="margin:0">Avisos para todo el equipo. Cada integrante los ve en su Mi Portal y puede marcarlos como leídos.</p><button class="btn primary" data-nuevo>${icon('megaphone')} Nuevo comunicado</button></div>
+        ${cs.length ? cs.map((x) => tarjetaComunicado(x, { gestion: true, total: equipo.length })).join('') : `<div class="card">${vacio('Todavía no hay comunicados en el área', 'megaphone')}</div>`}`;
+      dc.querySelector('[data-nuevo]').onclick = () => nuevoComunicado(dep);
+      on(dc, '[data-edc]', 'click', (b) => nuevoComunicado(dep, db.get('comunicados', b.dataset.edc)));
+      on(dc, '[data-delc]', 'click', async (b) => { if (await confirmar('¿Eliminar este comunicado?')) { db.remove('comunicados', b.dataset.delc); render(); } });
+      on(dc, '[data-lect]', 'click', (b) => { const x = db.get('comunicados', b.dataset.lect); verModal(`Lectura · ${x.titulo}`, equipo.map((e) => `<div class="list-row"><span class="avatar">${inicial(e.nombre_completo)}</span><div class="grow">${esc(e.nombre_completo)}</div>${(x.leido_por || []).includes(e.id) ? '<span class="pill ok">Leído</span>' : '<span class="pill warn">Sin leer</span>'}</div>`).join('') || vacio('Sin integrantes'), false); });
+      break;
+    }
+    case 'chat': {
+      let cv = db.where('conversaciones', (k) => k.tipo === 'departamento' && k.departamento === dep)[0];
+      const msgs = cv ? db.where('mensajes', (m) => m.conversacion_id === cv.id) : [];
+      dc.innerHTML = `<div class="card dep-chat"><div class="chat-main"><div class="hd"><span class="avatar">${icon('hash')}</span><div><b># ${esc(dep)}</b><div class="muted" style="font-size:.8rem">Canal del área · ${equipo.length} integrantes</div></div><a class="btn sm right" href="#/chat">${icon('external-link')} Abrir Chat completo</a></div>
+        <div class="msgs" data-msgs>${msgs.length ? msgs.map((m) => `<div class="msg ${m.autor_id === u.id ? 'me' : ''}">${m.autor_id !== u.id ? `<div class="who">${esc(m.autor)}</div>` : ''}${esc(m.texto).replace(/\n/g, '<br>')}<small>${fechaHora(m.fecha)}</small></div>`).join('') : '<div class="empty">Escribí el primer mensaje del área</div>'}</div>
+        <form class="composer"><input data-txt placeholder="Mensaje para ${esc(dep)}..." autocomplete="off"><button class="btn primary">${icon('send')}</button></form></div></div>`;
+      const box = dc.querySelector('[data-msgs]'); box.scrollTop = box.scrollHeight;
+      dc.querySelector('.composer').onsubmit = (ev) => {
+        ev.preventDefault(); const inp = dc.querySelector('[data-txt]'); const t = inp.value.trim(); if (!t) return;
+        if (!cv) cv = db.create('conversaciones', { tipo: 'departamento', departamento: dep, participantes: [] });
+        db.create('mensajes', { conversacion_id: cv.id, autor_id: u.id, autor: u.nombre, texto: t, fecha: new Date().toISOString() }); render();
+        setTimeout(() => document.querySelector('[data-txt]')?.focus(), 0);
+      };
+      break;
+    }
     case 'reclutamiento':
       dc.innerHTML = `<div class="row mb" style="justify-content:flex-end"><button class="btn primary" data-nc>${icon('plus')} Nuevo candidato</button></div><div data-k></div>`;
       kanban(dc.querySelector('[data-k]'), dep); dc.querySelector('[data-nc]').onclick = () => editarCandidato(null, dep);
       break;
-    case 'permisos': panelPermisos(dc, dep); break;
-    case 'evaluaciones':
-      dc.innerHTML = `<div class="row mb" style="justify-content:flex-end"><button class="btn primary" data-ne>${icon('plus')} Nueva evaluación</button></div><div data-l></div>`;
+    case 'permisos':
+      dc.innerHTML = `<div class="row mb" style="justify-content:flex-end"><button class="btn primary" data-np>${icon('plus')} Registrar permiso de un integrante</button></div><div data-p></div>`;
+      panelPermisos(dc.querySelector('[data-p]'), dep);
+      dc.querySelector('[data-np]').onclick = async () => {
+        const r = await formulario({ titulo: 'Registrar permiso', campos: [{ k: 'empleado_id', label: 'Integrante', type: 'select', req: true, full: true, options: [['', '— Seleccionar —'], ...equipo.map((e) => [e.id, e.nombre_completo])] }], guardar: 'Continuar' });
+        if (r?.empleado_id) solicitarPermiso(r.empleado_id);
+      };
+      break;
+    case 'evaluaciones': {
+      const sinEval = equipo.filter((e) => diasDesde(ultimaEval(e.id)?.fecha) > 180);
+      dc.innerHTML = `${sinEval.length ? `<div class="alert warn mb">${icon('triangle-alert')}<span style="flex:1">${sinEval.length} integrante${sinEval.length === 1 ? '' : 's'} sin evaluación en los últimos 6 meses: ${sinEval.map((e) => esc(e.nombre_completo)).join(', ')}</span></div>` : ''}
+        <div class="row mb" style="justify-content:flex-end"><button class="btn primary" data-ne>${icon('plus')} Nueva evaluación</button></div><div data-l></div>`;
       listaEvaluaciones(dc.querySelector('[data-l]'), dep); dc.querySelector('[data-ne]').onclick = () => editarEvaluacion(null, dep);
       break;
+    }
     case 'objetivos':
-      dc.innerHTML = `<div class="row mb" style="justify-content:flex-end"><button class="btn primary" data-no>${icon('plus')} Nuevo objetivo del área</button></div><div data-l></div>`;
+      dc.innerHTML = `<div class="row mb" style="justify-content:flex-end"><button class="btn primary" data-no>${icon('plus')} Nuevo objetivo</button></div><div data-l></div>`;
       listaObjetivos(dc.querySelector('[data-l]'), (o) => o.departamento === dep || ids.has(o.empleado_id), true, dep); dc.querySelector('[data-no]').onclick = () => editarObjetivo(null, dep);
       break;
     case 'capacitacion': {
-      const caps = db.list('capacitaciones');
-      dc.innerHTML = `<div class="card card-pad"><h3>Participación del equipo</h3>${caps.length ? `<div class="table-wrap"><table><tr><th>Programa</th><th>Estado</th><th>Inscriptos del área</th></tr>${caps.map((x) => { const n = (x.inscriptos || []).filter((i) => ids.has(i)); return `<tr><td><b>${esc(x.titulo)}</b><div class="muted" style="font-size:.8rem">${fecha(x.inicio)} · ${x.horas || 0} h</div></td><td>${estadoPill(x.estado)}</td><td>${n.length ? n.map((i) => esc(nombreEmp(i))).join(', ') : '<span class="muted">Nadie</span>'}</td></tr>`; }).join('')}</table></div>` : vacio('No hay programas')}</div>`;
-      break; }
+      const caps = db.where('capacitaciones', (x) => x.estado !== 'cancelado');
+      const horas = equipo.map((e) => [e.nombre_completo, caps.filter((x) => (x.inscriptos || []).includes(e.id)).reduce((a, x) => a + (Number(x.horas) || 0), 0)]);
+      dc.innerHTML = `<div class="grid g2 mb"><div class="card card-pad"><h3>Horas de formación por integrante</h3>${horas.length ? hbars(horas, (n) => n + ' h') : vacio('Sin integrantes')}</div>
+          <div class="card card-pad"><h3>Resumen</h3>${statTxt('Integrantes sin ninguna capacitación', horas.filter(([, n]) => !n).length, 'user-x', 't-amber')}</div></div>
+        <div class="card card-pad"><h3>Programas</h3>${caps.length ? caps.map((x) => { const n = (x.inscriptos || []).filter((i) => ids.has(i)); return `<div class="list-row">${icon('graduation-cap')}<div class="grow"><b>${esc(x.titulo)}</b><small>${fecha(x.inicio)} · ${x.horas || 0} h · ${esc(x.modalidad)} · ${n.length ? 'Del área: ' + n.map((i) => esc(nombreEmp(i).split(' ')[0])).join(', ') : 'nadie del área inscripto'}</small></div>${estadoPill(x.estado)}<button class="btn sm" data-insc="${x.id}">${icon('user-plus')} Inscribir</button></div>`; }).join('') : vacio('No hay programas')}</div>`;
+      on(dc, '[data-insc]', 'click', async (b) => {
+        const x = db.get('capacitaciones', b.dataset.insc); const actuales = new Set(x.inscriptos || []);
+        const r = await formulario({ titulo: `Inscribir en "${x.titulo}"`, campos: equipo.map((e) => ({ k: 'e_' + e.id, label: e.nombre_completo, type: 'checkbox', full: true, def: actuales.has(e.id) })), guardar: 'Guardar inscripciones' });
+        if (!r) return;
+        equipo.forEach((e) => { const marcado = r['e_' + e.id]; if (marcado && !actuales.has(e.id)) { actuales.add(e.id); const us = usuarioDeEmpleado(e.id); if (us) notificar(us.id, `Te inscribieron en la capacitación "${x.titulo}".`); } if (!marcado) actuales.delete(e.id); });
+        db.update('capacitaciones', x.id, { inscriptos: [...actuales] }); toast('Inscripciones actualizadas'); render();
+      });
+      break;
+    }
     case 'aprobaciones': {
-      const pend = db.where('permisos', (p) => p.departamento === dep && p.estado === 'pendiente');
-      dc.innerHTML = `<div class="card card-pad"><h3>Aprobaciones y derivaciones</h3><p class="muted" style="margin-top:0">Aprobá o rechazá las solicitudes de tu equipo, o derivalas a Administración / RR.HH.</p>${pend.length ? pend.map((p) => filaPermiso(p, true, `<button class="btn sm" data-der="${p.id}">${icon('forward')} ${p.derivado ? 'Derivada' : 'Derivar'}</button>`)).join('') : vacio('No hay solicitudes pendientes del área')}</div>`;
+      const hist = db.where('permisos', (p) => p.departamento === dep && p.estado !== 'pendiente').sort((a, b) => (b.resuelto || '').localeCompare(a.resuelto || '')).slice(0, 10);
+      dc.innerHTML = `<div class="card card-pad mb"><h3>Permisos para resolver</h3><p class="muted" style="margin-top:0">Aprobá o rechazá las solicitudes de tu equipo, o derivalas a Administración / RR.HH.${sesion.esGestor ? '' : ' Tus propias solicitudes las resuelve RR.HH.'}</p>${pendP.length ? pendP.map((p) => filaPermiso(p, true, `<button class="btn sm" data-der="${p.id}">${icon('forward')} ${p.derivado ? 'Derivada' : 'Derivar'}</button>`) + solapamiento(p, equipo)).join('') : vacio('No hay solicitudes pendientes del área', 'circle-check')}</div>
+        <div class="card card-pad mb"><h3>Documentos del área para revisar</h3>${pendD.length ? pendD.map((d) => `<div class="list-row">${icon('file')}<div class="grow"><b>${esc(d.titulo)}</b><small>${esc(d.subido_por)} · ${esc(d.nombre_archivo)} · ${fecha(d.creado)}</small></div><a class="btn sm" href="${d.archivo}" download="${esc(d.nombre_archivo)}">${icon('download')}</a><button class="btn sm ok" data-dok="${d.id}">${icon('check')} Aprobar</button><button class="btn sm danger" data-dno="${d.id}">${icon('x')}</button></div>`).join('') : vacio('No hay documentos pendientes', 'circle-check')}</div>
+        <div class="card card-pad"><h3>Resueltas recientemente</h3>${hist.length ? hist.map((p) => filaPermiso(p)).join('') : vacio('Sin historial')}</div>`;
       bindPermisos(dc);
+      on(dc, '[data-dok]', 'click', (b) => resolverDoc(b.dataset.dok, 'aprobado'));
+      on(dc, '[data-dno]', 'click', (b) => resolverDoc(b.dataset.dno, 'rechazado'));
       on(dc, '[data-der]', 'click', async (b) => { const r = await formulario({ titulo: 'Derivar a Administración', campos: [{ k: 'nota', label: 'Nota para Administración / RR.HH.', type: 'textarea', full: true }], guardar: 'Derivar' }); if (!r) return; const p = db.update('permisos', b.dataset.der, { derivado: sesion.usuario.nombre, nota_derivacion: r.nota }); admins().forEach((a) => notificar(a.id, `${sesion.usuario.nombre} derivó el permiso de ${p.empleado}.`)); toast('Solicitud derivada'); render(); });
-      break; }
+      break;
+    }
     default: {
-      const pendP = db.where('permisos', (p) => p.departamento === dep && p.estado === 'pendiente').length;
       const cands = db.where('candidatos', (x) => x.departamento === dep && !['contratado', 'rechazado'].includes(x.etapa)).length;
-      const objs = db.where('objetivos', (o) => o.departamento === dep || ids.has(o.empleado_id));
+      const objs = db.where('objetivos', (o) => (o.departamento === dep || ids.has(o.empleado_id)) && o.estado !== 'cancelado');
+      const avance = objs.length ? Math.round(objs.reduce((a, o) => a + (Number(o.progreso) || 0), 0) / objs.length) : 0;
       const prom = equipo.filter((e) => e.desempeno); const p = prom.length ? (prom.reduce((a, e) => a + Number(e.desempeno), 0) / prom.length).toFixed(1) : '—';
-      dc.innerHTML = `<div class="grid g4 mb">${stat('Empleados del área', equipo.length, 'users', 'bg-blue')}${stat('Permisos pendientes', pendP, 'calendar', 'bg-amber')}${stat('Candidatos en proceso', cands, 'briefcase', 'bg-violet')}${stat('Desempeño promedio', p, 'target', 'bg-green')}</div>
-        <div class="grid g2"><div class="card card-pad"><h3>Equipo</h3>${equipo.map((e) => `<div class="list-row"><span class="avatar">${inicial(e.nombre_completo)}</span><div class="grow"><b>${esc(e.nombre_completo)}</b><small>${esc(e.puesto)}</small></div>${estadoPill(e.estado)}</div>`).join('') || vacio('Sin empleados')}</div>
-        <div class="card card-pad"><h3>Objetivos del área</h3>${objs.map((o) => `<div class="list-row"><div class="grow"><b>${esc(o.titulo)}</b><div class="bar" style="margin-top:.4rem"><i style="width:${o.progreso || 0}%"></i></div></div><b>${o.progreso || 0}%</b></div>`).join('') || vacio('Sin objetivos')}</div></div>`;
+      const presentes = equipo.filter((e) => ['Trabajando', 'Ya se retiró'].includes(estadoHoy(e)[1])).length;
+      const en14 = new Date(Date.now() + 14 * 864e5).toISOString().slice(0, 10);
+      const proxAus = db.where('permisos', (x) => x.departamento === dep && x.estado !== 'rechazado' && x.hasta >= hoy && x.desde <= en14).sort((a, b) => a.desde.localeCompare(b.desde));
+      const cumples = cumpleanosProximos(30).filter(({ e }) => e.departamento === dep);
+      const sinEval = equipo.filter((e) => diasDesde(ultimaEval(e.id)?.fecha) > 180);
+      const vencidos = objs.filter((o) => o.estado === 'en progreso' && o.fecha_limite && o.fecha_limite < hoy);
+      const comunic = db.where('comunicados', (x) => x.departamento === dep).sort((a, b) => b.fecha.localeCompare(a.fecha))[0];
+      const alertas = [
+        pendP.length && ['warn', 'calendar', `${pendP.length} permiso${pendP.length === 1 ? '' : 's'} esperando tu respuesta`, 'aprobaciones'],
+        pendD.length && ['warn', 'file-text', `${pendD.length} documento${pendD.length === 1 ? '' : 's'} para revisar`, 'aprobaciones'],
+        vencidos.length && ['bad', 'target', `${vencidos.length} objetivo${vencidos.length === 1 ? '' : 's'} con la fecha límite vencida`, 'objetivos'],
+        sinEval.length && ['info', 'award', `${sinEval.length} integrante${sinEval.length === 1 ? '' : 's'} sin evaluación en 6 meses`, 'evaluaciones'],
+      ].filter(Boolean);
+      dc.innerHTML = `<div class="grid g4 mb">${stat('Presentes hoy', `${presentes}/${equipo.length}`, 'user-check', 'bg-green', 'según las fichadas')}${stat('Pendientes', nPend, 'bell-ring', 'bg-amber', 'permisos y documentos')}${stat('Avance de objetivos', avance + '%', 'target', 'bg-indigo', `${objs.length} objetivos del área`)}${stat('Desempeño promedio', p, 'star', 'bg-violet', `${cands} candidato${cands === 1 ? '' : 's'} en selección`)}</div>
+        ${alertas.length ? `<div class="card card-pad mb"><h3 class="row">${icon('bell-ring')} Para atender</h3>${alertas.map(([t, i, txt, k]) => `<button class="alert ${t}" data-go="${k}" style="width:100%;border:0;cursor:pointer;text-align:left">${icon(i)}<span style="flex:1">${esc(txt)}</span>${icon('chevron-right')}</button>`).join('')}</div>` : ''}
+        <div class="grid g2 mb">
+          <div class="card card-pad"><div class="row between"><h3 style="margin:0">Hoy en el área</h3><button class="btn sm" data-go="asistencia">Ver semana</button></div>${equipo.map((e) => { const est = estadoHoy(e); return `<div class="list-row"><span class="avatar">${inicial(e.nombre_completo)}</span><div class="grow"><b>${esc(e.nombre_completo)}</b><small>${esc(e.puesto)}</small></div><span class="pill ${est[0]}">${esc(est[1])}</span></div>`; }).join('') || vacio('Sin integrantes')}</div>
+          <div class="card card-pad"><h3>Próximas ausencias (14 días)</h3>${proxAus.length ? proxAus.map((x) => `<div class="list-row">${icon(x.estado === 'pendiente' ? 'clock' : 'calendar-check')}<div class="grow"><b>${esc(x.empleado)}</b><small>${esc(x.tipo)} · ${fecha(x.desde)} → ${fecha(x.hasta)}</small></div>${estadoPill(x.estado)}</div>`).join('') : vacio('Nadie del equipo se ausenta', 'calendar-check')}
+            ${cumples.length ? `<h3 style="margin-top:1.2rem">Cumpleaños</h3>${cumples.map(({ e, f, en }) => `<div class="list-row">${icon('cake')}<div class="grow"><b>${esc(e.nombre_completo)}</b><small>${f.toLocaleDateString('es-AR', { day: 'numeric', month: 'long' })}</small></div><span class="pill ${en === 0 ? 'ok' : ''}">${en === 0 ? '¡Hoy!' : 'en ' + en + ' d'}</span></div>`).join('')}` : ''}</div>
+        </div>
+        <div class="grid g2">
+          <div class="card card-pad"><div class="row between"><h3 style="margin:0">Objetivos del área</h3><button class="btn sm" data-go="objetivos">Ver todos</button></div>${objs.slice(0, 6).map((o) => `<div class="list-row"><div class="grow"><b>${esc(o.titulo)}</b><small>${o.responsable ? esc(o.responsable) : 'Toda el área'}${o.fecha_limite ? ' · vence ' + fecha(o.fecha_limite) : ''}</small><div class="bar" style="margin-top:.4rem"><i style="width:${o.progreso || 0}%"></i></div></div><b>${o.progreso || 0}%</b></div>`).join('') || vacio('Sin objetivos', 'target')}</div>
+          <div class="card card-pad"><div class="row between"><h3 style="margin:0">Último comunicado</h3><button class="btn sm" data-go="comunicados">${icon('megaphone')} Publicar</button></div>${comunic ? `<p><b>${esc(comunic.titulo)}</b> ${prioPill(comunic.prioridad)}</p><p class="muted" style="white-space:pre-wrap">${esc(comunic.texto.slice(0, 240))}${comunic.texto.length > 240 ? '…' : ''}</p><small class="muted">Leído por ${(comunic.leido_por || []).length} de ${equipo.length}</small>` : vacio('Todavía no publicaste comunicados', 'megaphone')}</div>
+        </div>`;
+      on(dc, '[data-go]', 'click', (b) => { tabDep = b.dataset.go; render(); });
     }
   }
 }
-function abrirCanal(dep) {
-  let x = db.where('conversaciones', (k) => k.tipo === 'departamento' && k.departamento === dep)[0];
-  if (!x) x = db.create('conversaciones', { tipo: 'departamento', departamento: dep, participantes: [] });
+let semanaDep = 0;
+function solapamiento(p, equipo) {
+  const otros = db.where('permisos', (x) => x.id !== p.id && x.departamento === p.departamento && x.estado !== 'rechazado' && x.desde <= p.hasta && x.hasta >= p.desde);
+  if (!otros.length) return '';
+  const libres = equipo.length - 1 - new Set(otros.map((x) => x.empleado_id)).size;
+  return `<div class="alert ${libres <= 0 ? 'bad' : 'warn'}" style="margin:-.3rem 0 .8rem 3.4rem;font-size:.82rem">${icon('users')}<span>Se superpone con ${otros.map((x) => `${esc(x.empleado)} (${esc(x.tipo)}, ${x.estado})`).join(', ')}. ${libres <= 0 ? 'El área quedaría sin nadie.' : `Quedarían ${libres} disponibles.`}</span></div>`;
+}
+function abrirDirecto(usuarioId) {
+  const u = sesion.usuario;
+  let x = db.where('conversaciones', (k) => k.tipo === 'directa' && k.participantes.includes(u.id) && k.participantes.includes(usuarioId))[0];
+  if (!x) x = db.create('conversaciones', { tipo: 'directa', participantes: [u.id, usuarioId] });
   convActual = x.id; ir('chat');
 }
 
@@ -987,4 +1168,5 @@ function auditoria(c) {
   pintar();
 }
 
-export const VISTAS = { dashboard, empleados, empleado, reclutamiento, permisos, evaluaciones, objetivos, capacitacion, documentos, aprobaciones, sucesion, empresa, usuarios, chat, portal, asistencia, calendario, organigrama, reportes, auditoria };
+const area = (c) => portal(c, [], 'depto');
+export const VISTAS = { area, dashboard, empleados, empleado, reclutamiento, permisos, evaluaciones, objetivos, capacitacion, documentos, aprobaciones, sucesion, empresa, usuarios, chat, portal, asistencia, calendario, organigrama, reportes, auditoria };

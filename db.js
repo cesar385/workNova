@@ -7,11 +7,11 @@ export const DEPARTAMENTOS = ['Tecnología', 'Recursos Humanos', 'Comercial', 'F
 
 const TABLAS = ['usuarios', 'empleados', 'candidatos', 'permisos', 'evaluaciones', 'objetivos',
   'capacitaciones', 'documentos', 'recibos', 'sucesion', 'conversaciones', 'mensajes', 'notificaciones', 'empresa',
-  'asistencia', 'feriados', 'auditoria'];
+  'asistencia', 'feriados', 'auditoria', 'comunicados'];
 
 // Tablas cuyos cambios se registran en el historial
 const AUDITADAS = { usuarios: 'Usuario', empleados: 'Empleado', candidatos: 'Candidato', permisos: 'Permiso', evaluaciones: 'Evaluación',
-  objetivos: 'Objetivo', capacitaciones: 'Capacitación', documentos: 'Documento', recibos: 'Recibo', sucesion: 'Plan de sucesión', empresa: 'Empresa', feriados: 'Feriado' };
+  objetivos: 'Objetivo', capacitaciones: 'Capacitación', documentos: 'Documento', recibos: 'Recibo', sucesion: 'Plan de sucesión', empresa: 'Empresa', feriados: 'Feriado', comunicados: 'Comunicado' };
 const etiqueta = (r) => r.nombre_completo || r.nombre || r.titulo || r.puesto || r.empleado || r.periodo || r.fecha || r.id;
 
 // Feriados nacionales de Argentina 2026 (verificar y editar desde Calendario)
